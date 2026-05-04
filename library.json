@@ -1,0 +1,25 @@
+{
+  "name": "WiFiManager",
+  "version": "1.0.0",
+  "description": "Reusable WiFi management module for ESP32 projects with persistent credential storage and BT configuration interface",
+  "keywords": ["wifi", "esp32", "bluetooth", "nvs", "persistence", "storage"],
+  "authors": [
+    {
+      "name": "Honza540",
+      "email": "honza.svoboda@gmail.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/honza540/WiFiManager.git"
+  },
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"],
+  "dependencies": [],
+  "export": {
+    "include": [
+      "src/*.h",
+      "include/*.h"
+    ]
+  }
+}

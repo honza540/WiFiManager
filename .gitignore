@@ -1,0 +1,12 @@
+*.o
+*.a
+*.so
+.DS_Store
+.vscode
+.idea
+build/
+dist/
+*.swp
+*.swo
+*~
+.clang-format
