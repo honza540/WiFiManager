@@ -1,0 +1,13 @@
+{
+  "name": "ArduinoHost",
+  "version": "0.1.0",
+  "frameworks": [
+    "native"
+  ],
+  "build": {
+    "srcFilter": [
+      "+<Arduino.cpp>",
+      "+<Arduino.h>"
+    ]
+  }
+}

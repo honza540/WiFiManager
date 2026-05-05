@@ -5,6 +5,7 @@
 .vscode
 .idea
 build/
+.pio/
 dist/
 *.swp
 *.swo
