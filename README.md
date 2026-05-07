@@ -1,4 +1,4 @@
-# WiFi Manager v1.0
+# WiFi Manager v1.1
 
 Reusable WiFi management module for ESP32 projects with persistent credential storage and BT configuration interface.
 
@@ -150,6 +150,34 @@ Configure logging level in `config.h`:
 #define LOG_TO_BT 1
 ```
 
+## Extending BT Commands
+
+To add custom BT commands in your project, implement the `ICommandHandler` interface:
+
+```cpp
+#include "ICommandHandler.h"
+
+class MyCommands : public ICommandHandler {
+public:
+    bool handleCommand(const String& cmd, const String& args) override {
+        if (cmd == "mycommand") {
+            // Handle your command
+            BTCommandHandler::sendResponse("My command executed!");
+            return true;
+        }
+        return false;
+    }
+    
+    String getHelpText() override {
+        return "mycommand - Execute my custom command";
+    }
+};
+
+// In setup():
+MyCommands* myCmds = new MyCommands();
+BTCommandHandler::registerCommandHandler(myCmds);
+```
+
 ## API Reference
 
 ### WiFiManager
@@ -207,5 +235,5 @@ Developed for PoolFilterWeb project (2026)
 
 ---
 
-**Version**: 1.0.0 (Stable)  
+**Version**: 1.1.0 (Stable)  
 **Status**: Production Ready for Testing
