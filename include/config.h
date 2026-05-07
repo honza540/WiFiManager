@@ -8,12 +8,14 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "version.h"
+
 // ============================================================================
 // VERSION CONSTANTS
 // ============================================================================
 
 #define FIRMWARE_VERSION "1.0.0"
-#define WIFIMANAGER_VERSION "1.0.0"
+#define WIFIMANAGER_VERSION WIFIMANAGER_VERSION_STRING
 #define WEB_SERVER_PORT 80
 
 // ============================================================================

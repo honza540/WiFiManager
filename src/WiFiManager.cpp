@@ -180,6 +180,7 @@ void WiFiManager::startAPMode() {
     // Logování informací
     LOG_INFO(TAG, "AP Mode started");
     LOG_INFO(TAG, "SSID: " + apSSID);
+    LOG_INFO(TAG, "AP MAC: " + WiFi.softAPmacAddress());
     LOG_INFO(TAG, "Password: " + apPassword);
     LOG_INFO(TAG, "IP: " + WiFi.softAPIP().toString());
     LOG_INFO(TAG, "Timeout: " + String(AP_MODE_TIMEOUT) + " seconds");
@@ -464,6 +465,8 @@ void WiFiManager::printNetworkInfo() {
     Serial.println(WiFi.SSID());
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
+    Serial.print("MAC: ");
+    Serial.println(WiFi.macAddress());
     Serial.print("Subnet: ");
     Serial.println(WiFi.subnetMask());
     Serial.print("Gateway: ");

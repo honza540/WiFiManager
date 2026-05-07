@@ -241,6 +241,8 @@ public:
     String SSID() const { return "MockSSID"; }
     String SSID(int) const { return "MockSSID"; }
     IPAddress localIP() const { return IPAddress(192,168,1,100); }
+    String macAddress() const { return "AA:BB:CC:DD:EE:FF"; }
+    String softAPmacAddress() const { return "FF:EE:DD:CC:BB:AA"; }
     IPAddress subnetMask() const { return IPAddress(255,255,255,0); }
     IPAddress gatewayIP() const { return IPAddress(192,168,1,1); }
     IPAddress dnsIP() const { return IPAddress(8,8,8,8); }
