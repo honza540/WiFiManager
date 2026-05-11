@@ -38,7 +38,8 @@ enum WiFiManagerState {
     WM_CONNECTING,     // Pokus o připojení k síti
     WM_CONNECTED,      // Úspěšně připojeno
     WM_AP_MODE,        // Režim přístupového bodu (konfigurační web)
-    WM_DISCONNECTED    // Odpojeno - žádné připojení
+    WM_DISCONNECTED,   // Odpojeno - žádné připojení
+    WM_RETRY_WAIT      // Cekani na dalsi reconnect pokus
 };
 
 class WiFiManager {
@@ -69,6 +70,20 @@ public:
     static void update();
 
     /**
+     * Request a non-blocking reconnect attempt.
+     *
+     * The real connection work runs from update(), so the application can keep
+     * doing useful work while WiFi reconnects in the background.
+     */
+    static void requestReconnect();
+
+    /**
+     * Request a non-blocking reconnect starting at a specific stored index.
+     * The regular priority order is still used from that index forward.
+     */
+    static void requestReconnect(uint8_t startIndex);
+
+    /**
      * Pokus o připojení k uloženým WiFi sítím
      * Zkusí je v pořadí: index 0 -> 1 -> 2
      * Timeout per síť: WIFI_CONNECT_TIMEOUT ms
@@ -81,7 +96,7 @@ public:
      * Spuštění AP módu (přístupový bod)
      * 
      * Vytvoří WiFi síť s názvem "PoolFilter-XXXXXX" (XXXXXX = chip ID)
-     * Heslo: definováno v config.h (BT_PASSWORD)
+     * Heslo: definováno v config.h (WIFI_AP_PASSWORD)
      * 
      * Web server běží na:
      * - IP: 192.168.4.1
@@ -180,6 +195,16 @@ private:
     
     // Čas poslední zmáry připojení
     static unsigned long lastConnectionAttempt;
+
+    // Non-blocking reconnect state. Keep this tiny so WiFi management leaves
+    // CPU/RAM headroom for the actual pool-filter work.
+    static unsigned long connectionAttemptStartTime;
+    static unsigned long nextReconnectAttemptTime;
+    static uint8_t requestedStartIndex;
+    static uint8_t nextNetworkIndex;
+    static uint8_t reconnectFailureCount;
+    static bool connectionSequenceActive;
+    static bool connectedOnce;
     
     // Index aktuálně připojené WiFi sítě
     // 0-2 = NVS, WIFI_MAX_CREDENTIALS = fixed fallback.
@@ -198,6 +223,15 @@ private:
     
     // Obsluha AP módu - zpracování webových requestů
     static void handleAPModeWeb();
+
+    // Non-blocking connection helpers
+    static void startConnectionSequence();
+    static bool startNextConnectionCandidate();
+    static void handleConnectionProgress();
+    static void handleConnectionFailure();
+    static void scheduleReconnect();
+    static unsigned long getReconnectDelayMs();
+    static bool tryConnectBlocking(const String &ssid, const String &password, uint8_t networkIndex);
     
     // GET /
     static void handleAPModeRoot();

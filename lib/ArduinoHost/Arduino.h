@@ -232,12 +232,13 @@ public:
     int RSSI() const { return -50; }
     int RSSI(int) const { return -50; }
     int channel() const { return 1; }
-    bool softAP(const char*, const char*) { return true; }
+    bool softAP(const char*, const char*, int = 1, int = 0, int = 4, bool = false) { return true; }
     IPAddress softAPIP() const { return IPAddress(192,168,4,1); }
     void softAPdisconnect(bool) {}
     void disconnect(bool) { connected = false; }
     void scanNetworks(bool) { scanResultCount = 0; }
     int scanComplete() { return scanResultCount; }
+    void scanDelete() {}
     String SSID() const { return "MockSSID"; }
     String SSID(int) const { return "MockSSID"; }
     IPAddress localIP() const { return IPAddress(192,168,1,100); }
@@ -281,6 +282,9 @@ public:
     BluetoothSerial() : connectedFlag(false) {}
     bool begin(const char*, bool) {
         connectedFlag = false;
+        return true;
+    }
+    bool setPin(const char*) {
         return true;
     }
     bool connected() const {

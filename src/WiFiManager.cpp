@@ -1,6 +1,30 @@
 #include "WiFiManager.h"
 #include <WebServer.h>
 
+#ifndef WIFI_AP_SSID_PREFIX
+#define WIFI_AP_SSID_PREFIX "PoolFilter-"
+#endif
+
+#ifndef WIFI_AP_PASSWORD
+#define WIFI_AP_PASSWORD "PoolFilter37"
+#endif
+
+#ifndef WIFI_AP_CHANNEL
+#define WIFI_AP_CHANNEL 1
+#endif
+
+#ifndef WIFI_AP_MAX_CLIENTS
+#define WIFI_AP_MAX_CLIENTS 1
+#endif
+
+#ifndef WIFI_RECONNECT_BASE_DELAY_MS
+#define WIFI_RECONNECT_BASE_DELAY_MS 5000
+#endif
+
+#ifndef WIFI_RECONNECT_MAX_DELAY_MS
+#define WIFI_RECONNECT_MAX_DELAY_MS 60000
+#endif
+
 // ============================================================================
 // STATIC MEMBER INITIALIZATION - Inicializace statických proměnných
 // ============================================================================
@@ -16,6 +40,14 @@ unsigned long WiFiManager::apModeStartTime = 0;
 
 // Čas poslední zmáry připojení
 unsigned long WiFiManager::lastConnectionAttempt = 0;
+
+unsigned long WiFiManager::connectionAttemptStartTime = 0;
+unsigned long WiFiManager::nextReconnectAttemptTime = 0;
+uint8_t WiFiManager::requestedStartIndex = 0;
+uint8_t WiFiManager::nextNetworkIndex = 0;
+uint8_t WiFiManager::reconnectFailureCount = 0;
+bool WiFiManager::connectionSequenceActive = false;
+bool WiFiManager::connectedOnce = false;
 
 // Index aktuálně připojené WiFi sítě (0-2)
 uint8_t WiFiManager::currentNetworkIndex = 0;
@@ -51,11 +83,24 @@ void WiFiManager::begin() {
     // Výpis všech uložených WiFi sítí (pro debug)
     WiFiStorageManager::printAllCredentials();
 
-    // Pokusit se připojit k uloženým síti
-    if (!connectToStoredNetwork()) {
-        LOG_WARN(TAG, "Connection to stored network failed, entering AP mode");
-        startAPMode();
+    // Start connection in non-blocking mode. update() will advance the state
+    // machine so the main application is not stuck in setup().
+    requestReconnect();
+}
+
+void WiFiManager::requestReconnect() {
+    requestReconnect(0);
+}
+
+void WiFiManager::requestReconnect(uint8_t startIndex) {
+    if (state == WM_AP_MODE) {
+        stopAPMode();
     }
+
+    requestedStartIndex = startIndex < WIFI_MAX_CREDENTIALS ? startIndex : 0;
+    reconnectFailureCount = 0;
+    nextReconnectAttemptTime = millis();
+    startConnectionSequence();
 }
 
 /**
@@ -115,6 +160,8 @@ bool WiFiManager::connectToStoredNetwork() {
             // ÚSPĚCH!
             Serial.println();  // Nový řádek po tečkách
             currentNetworkIndex = i;  // Pamatovat si kterou síť jsme právě připojili
+            connectedOnce = true;
+            reconnectFailureCount = 0;
             printNetworkInfo();  // Vytisknout detaily (IP, Gateway, atd.)
             setState(WM_CONNECTED);  // Nastavit stav
             delete[] credentials;  // Dealokovat paměť
@@ -142,12 +189,15 @@ bool WiFiManager::connectToStoredNetwork() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println();
         currentNetworkIndex = WIFI_MAX_CREDENTIALS;
+        connectedOnce = true;
+        reconnectFailureCount = 0;
         printNetworkInfo();
         setState(WM_CONNECTED);
         return true;
     }
 
     LOG_ERROR(TAG, "Failed to connect to any stored or fallback network");
+    setState(WM_DISCONNECTED);
     return false;
 }
 
@@ -159,7 +209,7 @@ bool WiFiManager::connectToStoredNetwork() {
  * 
  * Postup:
  * 1. Generovat jméno (PoolFilter-XXXXXX kde X = chip ID)
- * 2. Spustit AP s heslem (BT_PASSWORD z config.h)
+ * 2. Spustit AP s vlastnim WiFi heslem (WIFI_AP_PASSWORD)
  * 3. Vytvořit WebServer na portu 80 s HTML konfigurátorem
  * 4. Čekat na konfiguraci s timeoutem (AP_MODE_TIMEOUT)
  */
@@ -168,20 +218,38 @@ void WiFiManager::startAPMode() {
     setState(WM_AP_MODE);
     apModeStartTime = millis();
 
-    // Generovat unikátní jméno: "PoolFilter-XXXXXX"
-    // ESP.getEfuseMac() vrací jedinečné ID destiček
-    String apSSID = "PoolFilter-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-    String apPassword = BT_PASSWORD;  // Heslo z config.h ("37")
+    // Generate a unique AP name. The prefix is configurable, but the chip ID
+    // keeps several devices in the same room distinguishable.
+    String apSSID = String(WIFI_AP_SSID_PREFIX) + String((uint32_t)ESP.getEfuseMac(), HEX);
+    String apPassword = WIFI_AP_PASSWORD;
+    bool usePassword = apPassword.length() >= 8;
+
+    if (apPassword.length() > 0 && !usePassword) {
+        LOG_WARN(TAG, "WIFI_AP_PASSWORD is shorter than 8 chars; starting open setup AP");
+    }
 
     // Nastavit WiFi do AP módu
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(apSSID.c_str(), apPassword.c_str());
+    bool apStarted = WiFi.softAP(
+        apSSID.c_str(),
+        usePassword ? apPassword.c_str() : nullptr,
+        WIFI_AP_CHANNEL,
+        0,
+        WIFI_AP_MAX_CLIENTS
+    );
+
+    if (!apStarted) {
+        LOG_ERROR(TAG, "Failed to start AP mode");
+        setState(WM_DISCONNECTED);
+        scheduleReconnect();
+        return;
+    }
 
     // Logování informací
     LOG_INFO(TAG, "AP Mode started");
     LOG_INFO(TAG, "SSID: " + apSSID);
     LOG_INFO(TAG, "AP MAC: " + WiFi.softAPmacAddress());
-    LOG_INFO(TAG, "Password: " + apPassword);
+    LOG_INFO(TAG, usePassword ? "Security: WPA/WPA2" : "Security: open AP");
     LOG_INFO(TAG, "IP: " + WiFi.softAPIP().toString());
     LOG_INFO(TAG, "Timeout: " + String(AP_MODE_TIMEOUT) + " seconds");
 
@@ -227,29 +295,30 @@ void WiFiManager::stopAPMode() {
  * - Monitoring stavu WiFi připojení
  */
 void WiFiManager::update() {
-    // ========== AP MÓD ZPRACOVÁNÍ ==========
     if (state == WM_AP_MODE) {
-        // Obsluha příchozích webových requestů
         if (apModeServer != nullptr) {
             apModeServer->handleClient();
         }
 
-        // Kontrola timeout AP módu
-        // Pokud se žádná konfigurace nedouskytne za AP_MODE_TIMEOUT sekund
-        // Restartovat desku a zkusit znovu
-        if (millis() - apModeStartTime > (AP_MODE_TIMEOUT * 1000)) {
-            LOG_WARN(TAG, "AP mode timeout, rebooting");
-            delay(1000);
-            ESP.restart();  // Restart destiček
+        if (millis() - apModeStartTime > (AP_MODE_TIMEOUT * 1000UL)) {
+            LOG_WARN(TAG, "AP mode timeout, returning to reconnect loop");
+            stopAPMode();
+            scheduleReconnect();
         }
     }
 
-    // ========== MONITORING PŘIPOJENÍ ==========
-    // Pokud jsme připojeni ale připojení se přerušilo
+    if (state == WM_CONNECTING) {
+        handleConnectionProgress();
+    }
+
+    if (state == WM_RETRY_WAIT && millis() - nextReconnectAttemptTime < 0x80000000UL) {
+        startConnectionSequence();
+    }
+
     if (state == WM_CONNECTED && WiFi.status() != WL_CONNECTED) {
         LOG_WARN(TAG, "WiFi disconnected!");
         setState(WM_DISCONNECTED);
-        // TODO: Implementovat automatické znovupřipojení
+        scheduleReconnect();
     }
 }
 
@@ -277,6 +346,8 @@ String WiFiManager::getStateString() {
             return "AP_MODE";
         case WM_DISCONNECTED:
             return "DISCONNECTED";
+        case WM_RETRY_WAIT:
+            return "RETRY_WAIT";
         default:
             return "UNKNOWN";
     }
@@ -363,6 +434,7 @@ void WiFiManager::scanNetworks(bool async) {
 
     LOG_INFO(TAG, "Starting WiFi scan...");
     scanInProgress = true;
+    scanResultCount = WIFI_SCAN_RUNNING;
     WiFi.scanNetworks(async);
 }
 
@@ -373,11 +445,13 @@ void WiFiManager::scanNetworks(bool async) {
 int WiFiManager::getScanResultCount() {
     scanResultCount = WiFi.scanComplete();
     if (scanResultCount == WIFI_SCAN_FAILED) {
+        scanInProgress = false;
         return -1;  // Chyba
     }
     if (scanResultCount == WIFI_SCAN_RUNNING) {
         return -2;  // Stále probíhá
     }
+    scanInProgress = false;
     return scanResultCount;
 }
 
@@ -439,6 +513,140 @@ WebServer* WiFiManager::getWebServer() {
 // PRIVATE METHODS - Privátní metody
 // ============================================================================
 
+void WiFiManager::startConnectionSequence() {
+    connectionSequenceActive = true;
+    nextNetworkIndex = requestedStartIndex;
+    requestedStartIndex = 0;
+    WiFi.mode(WIFI_STA);
+
+    if (!startNextConnectionCandidate()) {
+        handleConnectionFailure();
+    }
+}
+
+bool WiFiManager::startNextConnectionCandidate() {
+    while (nextNetworkIndex < WIFI_MAX_CREDENTIALS) {
+        WiFiCredential credential = WiFiStorageManager::loadCredential(nextNetworkIndex);
+        uint8_t candidateIndex = nextNetworkIndex;
+        nextNetworkIndex++;
+
+        if (!credential.valid) {
+            continue;
+        }
+
+        LOG_INFO(TAG, "Connecting to: " + credential.ssid);
+        WiFi.disconnect(false);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(credential.ssid.c_str(), credential.password.c_str());
+
+        currentNetworkIndex = candidateIndex;
+        connectionAttemptStartTime = millis();
+        lastConnectionAttempt = connectionAttemptStartTime;
+        setState(WM_CONNECTING);
+        return true;
+    }
+
+    if (nextNetworkIndex == WIFI_MAX_CREDENTIALS) {
+        nextNetworkIndex++;
+        LOG_WARN(TAG, "Trying fixed fallback: " WIFI_FALLBACK_SSID);
+        WiFi.disconnect(false);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(WIFI_FALLBACK_SSID, WIFI_FALLBACK_PASSWORD);
+
+        currentNetworkIndex = WIFI_MAX_CREDENTIALS;
+        connectionAttemptStartTime = millis();
+        lastConnectionAttempt = connectionAttemptStartTime;
+        setState(WM_CONNECTING);
+        return true;
+    }
+
+    connectionSequenceActive = false;
+    return false;
+}
+
+void WiFiManager::handleConnectionProgress() {
+    if (WiFi.status() == WL_CONNECTED) {
+        connectionSequenceActive = false;
+        reconnectFailureCount = 0;
+        connectedOnce = true;
+        printNetworkInfo();
+        setState(WM_CONNECTED);
+        return;
+    }
+
+    if (millis() - connectionAttemptStartTime <= WIFI_CONNECT_TIMEOUT) {
+        return;
+    }
+
+    LOG_WARN(TAG, "Connection timeout");
+    if (!startNextConnectionCandidate()) {
+        handleConnectionFailure();
+    }
+}
+
+void WiFiManager::handleConnectionFailure() {
+    connectionSequenceActive = false;
+
+    if (!connectedOnce) {
+        LOG_WARN(TAG, "Initial connection failed, entering AP setup mode");
+        startAPMode();
+        return;
+    }
+
+    LOG_WARN(TAG, "Reconnect sequence failed");
+    scheduleReconnect();
+}
+
+void WiFiManager::scheduleReconnect() {
+    unsigned long delayMs = getReconnectDelayMs();
+    nextReconnectAttemptTime = millis() + delayMs;
+    reconnectFailureCount++;
+    setState(WM_RETRY_WAIT);
+    LOG_INFO(TAG, "Next WiFi reconnect in " + String(delayMs / 1000) + " seconds");
+}
+
+unsigned long WiFiManager::getReconnectDelayMs() {
+    unsigned long delayMs = WIFI_RECONNECT_BASE_DELAY_MS;
+
+    for (uint8_t i = 0; i < reconnectFailureCount && delayMs < WIFI_RECONNECT_MAX_DELAY_MS; i++) {
+        delayMs *= 2;
+        if (delayMs > WIFI_RECONNECT_MAX_DELAY_MS) {
+            delayMs = WIFI_RECONNECT_MAX_DELAY_MS;
+        }
+    }
+
+    return delayMs;
+}
+
+bool WiFiManager::tryConnectBlocking(const String &ssid, const String &password, uint8_t networkIndex) {
+    LOG_INFO(TAG, "Attempting to connect to: " + ssid);
+
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid.c_str(), password.c_str());
+
+    unsigned long startTime = millis();
+    while (WiFi.status() != WL_CONNECTED) {
+        if (millis() - startTime > WIFI_CONNECT_TIMEOUT) {
+            LOG_WARN(TAG, "Connection timeout for: " + ssid);
+            break;
+        }
+        delay(100);
+        Serial.print(".");
+    }
+
+    if (WiFi.status() != WL_CONNECTED) {
+        return false;
+    }
+
+    Serial.println();
+    currentNetworkIndex = networkIndex;
+    connectedOnce = true;
+    reconnectFailureCount = 0;
+    printNetworkInfo();
+    setState(WM_CONNECTED);
+    return true;
+}
+
 /**
  * Nastavit nový stav a zalogovat změnu
  * @param newState - Nový stav
@@ -450,7 +658,8 @@ void WiFiManager::setState(WiFiManagerState newState) {
                   newState == WM_CONNECTING ? "CONNECTING" :
                   newState == WM_CONNECTED ? "CONNECTED" :
                   newState == WM_AP_MODE ? "AP_MODE" :
-                  newState == WM_DISCONNECTED ? "DISCONNECTED" : "UNKNOWN"));
+                  newState == WM_DISCONNECTED ? "DISCONNECTED" :
+                  newState == WM_RETRY_WAIT ? "RETRY_WAIT" : "UNKNOWN"));
         state = newState;
     }
 }
@@ -505,22 +714,29 @@ void WiFiManager::handleAPModeStatus() {
 }
 
 void WiFiManager::handleAPModeScan() {
-    // Spustit skenování sítí
-    scanNetworks();
-    delay(2000);  // Čekat na výsledky
+    if (!scanInProgress) {
+        scanNetworks(true);
+    }
+
+    int count = getScanResultCount();
+    if (count == -2) {
+        apModeServer->send(202, "text/plain", "Scan running, refresh /scan in a few seconds");
+        return;
+    }
 
     String result = "Available Networks:\n";
-    int count = getScanResultCount();
-
-    if (count == 0) {
+    if (count < 0) {
+        result += "Scan failed";
+    } else if (count == 0) {
         result += "No networks found";
     } else {
-        // Vypsat každou síť
         for (int i = 0; i < count; i++) {
             result += String(i + 1) + ". " + getScanResult(i) + "\n";
         }
     }
 
+    WiFi.scanDelete();
+    WiFi.mode(WIFI_AP);
     apModeServer->send(200, "text/plain", result);
 }
 
@@ -542,11 +758,10 @@ void WiFiManager::handleAPModeSave() {
 
     // Uložení do NVS
     if (addWiFiNetwork(ssid, pass, idx)) {
-        // Úspěch - poslat odpověď a restartovat
         apModeServer->send(200, "text/html", 
-            "<html><body><h2>Saved!</h2><p>WiFi credentials saved. Rebooting...</p></body></html>");
-        delay(2000);
-        ESP.restart();  // Restartovat desku aby se zkusila připojit
+            "<html><body><h2>Saved!</h2><p>WiFi credentials saved. Connecting...</p></body></html>");
+        stopAPMode();
+        startConnectionSequence();
     } else {
         // Chyba
         apModeServer->send(400, "text/plain", "Failed to save credentials");

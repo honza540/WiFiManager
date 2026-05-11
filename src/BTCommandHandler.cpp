@@ -14,7 +14,15 @@ void BTCommandHandler::begin() {
 
     LOG_INFO(TAG, "Starting Bluetooth with name: " BT_DEVICE_NAME);
 
-    if (!serialBT->begin(BT_DEVICE_NAME, true)) { // Master mode
+    // BluetoothSerial role matters:
+    // - Slave/server mode (isMaster=false): ESP32 advertises an SPP service.
+    //   A phone/PC initiates the connection and uses ESP32 as a serial console.
+    //   This is what we want for a maintenance/debug terminal.
+    // - Master/client mode (isMaster=true): ESP32 actively connects to another
+    //   Bluetooth SPP server. That is useful for peripherals, but awkward for
+    //   a phone terminal because the phone expects to connect to the ESP32.
+    serialBT->setPin(BT_PASSWORD);
+    if (!serialBT->begin(BT_DEVICE_NAME, false)) {
         LOG_ERROR(TAG, "Failed to start Bluetooth");
         return;
     }

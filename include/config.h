@@ -29,6 +29,15 @@
 #define WIFI_FALLBACK_SSID "BeSmarter"
 #define WIFI_FALLBACK_PASSWORD "123456789"
 
+// Konfiguracni AP pro prvotni nastaveni WiFi.
+// Pozor: WPA/WPA2 SoftAP heslo na ESP32 musi mit alespon 8 znaku.
+// BT_PASSWORD muze zustat kratky servisni PIN, ale pro WiFi AP pouzivame
+// samostatne heslo, aby AP skutecne nastartoval v zabezpecenem rezimu.
+#define WIFI_AP_SSID_PREFIX "PoolFilter-"
+#define WIFI_AP_PASSWORD "PoolFilter37"
+#define WIFI_AP_CHANNEL 1
+#define WIFI_AP_MAX_CLIENTS 1
+
 // Timeout pro připojování k jedné WiFi síti (ms)
 // Po uplynutí se zkusí další síť ze seznamu
 #define WIFI_CONNECT_TIMEOUT 15000
@@ -36,8 +45,13 @@
 // Timeout pro skenování dostupných WiFi sítí (ms)
 #define WIFI_SCAN_TIMEOUT 10000
 
+// Reconnect retry backoff. WiFi reconnect bezi neblokujicim stavovym automatem
+// v update(), aby aplikace nemusela cekat v setup()/loop().
+#define WIFI_RECONNECT_BASE_DELAY_MS 5000
+#define WIFI_RECONNECT_MAX_DELAY_MS 60000
+
 // Timeout pro AP mode (sekundy) - jak dlouho čekat na konfiguraci přes web
-// Pokud v tomto čase neobjeví konfigurace, deska se restartuje
+// Pokud v tomto case neprijde konfigurace, AP se vypne a WiFi zkusi reconnect.
 #define AP_MODE_TIMEOUT 300
 
 // ============================================================================

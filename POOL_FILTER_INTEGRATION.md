@@ -11,6 +11,13 @@ BTCommandHandler (Orchestrator)
 └── [PoolFilterWeb] PoolFilterCommands (zaregistrujete vy)
 ```
 
+## Poznamky pro v1.2
+
+- `WiFiManager::begin()` uz dlouze neblokuje v `setup()`. Pripojovani bezi pres `WiFiManager::update()`, takze pool filter logika musi dal volat `update()` v kazde iteraci `loop()`.
+- Kod, ktery potrebuje internet/LAN, by mel cekat na `WiFiManager::getState() == WM_CONNECTED`.
+- Bluetooth zustava zapnute jako servisni/debug konzole, ale ESP32 je ted SPP slave/server. Telefon nebo notebook se pripojuje k ESP32; ESP32 se nepokousi aktivne pripojit k telefonu.
+- Pro konfiguracni AP pridejte do vlastniho `include/config.h` idealne `#define WIFI_AP_PASSWORD "alespon8znaku"`. Knihovna ma default, takze stare projekty kvuli tomu neprestanou kompilovat.
+
 ## Jak zaregistrovat vlastní příkazy z PoolFilterWeb
 
 ### 1. Vytvořit třídu implementující `ICommandHandler`

@@ -214,6 +214,15 @@ void WiFiStorageManager::clearCredential(uint8_t index) {
     nvs.remove(ssidKey.c_str());
     nvs.remove(passKey.c_str());
 
+    uint8_t newCount = 0;
+    for (uint8_t i = 0; i < WIFI_MAX_CREDENTIALS; i++) {
+        String key = "wifi_ssid_" + String(i);
+        if (nvs.getString(key.c_str(), "").length() > 0) {
+            newCount = i + 1;
+        }
+    }
+    nvs.putUChar("wifi_count", newCount);
+
     LOG_INFO(TAG, "Credential " + String(index) + " cleared");
 }
 

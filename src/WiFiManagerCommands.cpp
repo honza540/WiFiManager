@@ -114,8 +114,8 @@ void WiFiManagerCommands::cmd_netconnect(const String &args) {
     }
 
     sendResponse("Attempting to connect to network index " + String(index) + "...");
-    // Note: Implement actual reconnection logic if needed
-    sendResponse("Reconnection logic not yet implemented");
+    WiFiManager::requestReconnect(index);
+    sendResponse("Reconnect requested. Use netstatus to watch progress.");
 }
 
 void WiFiManagerCommands::cmd_status() {
@@ -148,12 +148,17 @@ void WiFiManagerCommands::cmd_netstatus() {
 
 void WiFiManagerCommands::cmd_netmonitor() {
     sendResponse("\nScanning WiFi networks...");
-    WiFiManager::scanNetworks(false);
-    delay(1000);
+    WiFiManager::scanNetworks(true);
+
+    unsigned long startTime = millis();
+    while (WiFiManager::getScanResultCount() == -2 && millis() - startTime < WIFI_SCAN_TIMEOUT) {
+        delay(100);
+    }
 
     int count = WiFiManager::getScanResultCount();
     if (count <= 0) {
         sendResponse("No networks found or scan failed");
+        WiFi.scanDelete();
         return;
     }
 
@@ -169,6 +174,7 @@ void WiFiManagerCommands::cmd_netmonitor() {
             sendResponse("[" + String(i) + "] " + ssid + " | RSSI: " + rssi + " | " + enc);
         }
     }
+    WiFi.scanDelete();
 }
 
 void WiFiManagerCommands::cmd_live() {

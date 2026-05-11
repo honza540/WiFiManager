@@ -5,14 +5,21 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
-// 1.1.0 - Added modular BT command handler system with ICommandHandler interface
+// 1.2.0 - Non-blocking WiFi reconnect flow and BT slave/server console mode
 
 #define WIFIMANAGER_VERSION_MAJOR 1
-#define WIFIMANAGER_VERSION_MINOR 1
+#define WIFIMANAGER_VERSION_MINOR 2
 #define WIFIMANAGER_VERSION_PATCH 0
-#define WIFIMANAGER_VERSION_STRING "1.1.0"
+#define WIFIMANAGER_VERSION_STRING "1.2.0"
 
 // Changelog:
+// v1.2.0 (2026-05-11)
+//   - begin() starts WiFi connection in non-blocking mode; update() advances it
+//   - Added reconnect backoff and AP timeout without forced reboot
+//   - Added dedicated WIFI_AP_PASSWORD for valid ESP32 SoftAP WPA password length
+//   - Bluetooth console now runs as slave/server so phones connect to ESP32
+//   - WiFi scan endpoints use async scan and release scan results
+//
 // v1.1.0 (2026-05-07)
 //   - Added ICommandHandler interface for modular BT commands
 //   - Refactored BTCommandHandler as orchestrator with handler registry

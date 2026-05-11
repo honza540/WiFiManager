@@ -1,4 +1,4 @@
-# WiFi Manager v1.1
+# WiFi Manager v1.2
 
 Reusable WiFi management module for ESP32 projects with persistent credential storage and BT configuration interface.
 
@@ -13,14 +13,19 @@ Reusable WiFi management module for ESP32 projects with persistent credential st
 - Try connecting to stored networks by priority
 - Automatic timeout and failover
 - Connection state monitoring
+- Non-blocking reconnect state machine in `update()`
+- Backoff reconnect after disconnects
 
 ✅ **Fallback AP Mode**
 - Web-based configuration interface
 - Network scanning and listing
 - Set credentials remotely
+- Dedicated `WIFI_AP_PASSWORD` for valid ESP32 SoftAP WPA password length
+- AP timeout returns to reconnect loop instead of rebooting the board
 
 ✅ **Bluetooth Interface**
 - Command-based control via BT (password: "37")
+- ESP32 runs as Bluetooth SPP server/slave so phones connect to it as a console
 - Monitor WiFi status
 - Save/list/clear credentials
 - Scan available networks
@@ -60,7 +65,7 @@ Or with a specific version:
 
 ```ini
 lib_deps =
-    https://github.com/honza540/WiFiManager.git#v1.0.0
+    https://github.com/honza540/WiFiManager.git#v1.2.0
 ```
 
 ### Manual Installation
@@ -97,11 +102,14 @@ void loop() {
 Edit `include/config.h` in your project to customize:
 - Hardware pins
 - WiFi timeouts
+- WiFi AP setup password (`WIFI_AP_PASSWORD`, 8+ chars for WPA/WPA2)
 - BT device name & password
 - Log levels
 - Storage namespace
 
-**Important:** The library depends on `config.h` being in your project's `include/` folder. Copy the configuration template from this library and modify it as needed.
+**Compatibility:** Existing projects can keep their current `config.h`; v1.2 provides defaults for the new AP/reconnect macros. You should still add `WIFI_AP_PASSWORD` explicitly when convenient so the setup AP password is not confused with the shorter BT PIN.
+
+**Behavior note:** `WiFiManager::begin()` now starts connection work and returns quickly. Call `WiFiManager::update()` in `loop()` as before, and gate network-dependent application work on `WiFiManager::getState() == WM_CONNECTED` or `WiFi.status() == WL_CONNECTED`.
 
 ### BT Commands
 
@@ -218,7 +226,7 @@ bool BTCommandHandler::isConnected();  // Check BT connection
 ## Future Enhancements
 
 - [ ] HTTPS support for AP mode config
-- [ ] WiFi automatic reconnection on disconnect
+- [x] WiFi automatic reconnection on disconnect
 - [ ] Signal strength monitoring log
 - [ ] Web dashboard with React/Vue frontend
 - [ ] mDNS autodiscovery
@@ -235,5 +243,5 @@ Developed for PoolFilterWeb project (2026)
 
 ---
 
-**Version**: 1.1.0 (Stable)  
+**Version**: 1.2.0 (Stable)  
 **Status**: Production Ready for Testing
