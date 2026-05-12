@@ -1,29 +1,6 @@
 #include "WiFiManager.h"
+#include "BTCommandHandler.h"
 #include <WebServer.h>
-
-#ifndef WIFI_AP_SSID_PREFIX
-#define WIFI_AP_SSID_PREFIX "PoolFilter-"
-#endif
-
-#ifndef WIFI_AP_PASSWORD
-#define WIFI_AP_PASSWORD "PoolFilter37"
-#endif
-
-#ifndef WIFI_AP_CHANNEL
-#define WIFI_AP_CHANNEL 1
-#endif
-
-#ifndef WIFI_AP_MAX_CLIENTS
-#define WIFI_AP_MAX_CLIENTS 1
-#endif
-
-#ifndef WIFI_RECONNECT_BASE_DELAY_MS
-#define WIFI_RECONNECT_BASE_DELAY_MS 5000
-#endif
-
-#ifndef WIFI_RECONNECT_MAX_DELAY_MS
-#define WIFI_RECONNECT_MAX_DELAY_MS 60000
-#endif
 
 // ============================================================================
 // STATIC MEMBER INITIALIZATION - Inicializace statických proměnných
@@ -48,6 +25,8 @@ uint8_t WiFiManager::nextNetworkIndex = 0;
 uint8_t WiFiManager::reconnectFailureCount = 0;
 bool WiFiManager::connectionSequenceActive = false;
 bool WiFiManager::connectedOnce = false;
+bool WiFiManager::apSaveReconnectPending = false;
+unsigned long WiFiManager::apSaveReconnectAt = 0;
 
 // Index aktuálně připojené WiFi sítě (0-2)
 uint8_t WiFiManager::currentNetworkIndex = 0;
@@ -76,6 +55,9 @@ const char* WiFiManager::TAG = "WiFiMgr";
  */
 void WiFiManager::begin() {
     LOG_INFO(TAG, "WiFi Manager v" WIFIMANAGER_VERSION " starting...");
+
+    // Bring up the service console before WiFi starts changing radio state.
+    BTCommandHandler::begin();
 
     // Inicializace NVS paměti (ukládání WiFi dat)
     WiFiStorageManager::begin();
@@ -172,28 +154,32 @@ bool WiFiManager::connectToStoredNetwork() {
     // FAILURE - žádná síť nebyla dostupná
     delete[] credentials;
 
-    LOG_WARN(TAG, "Stored WiFi unavailable, trying fixed fallback: " WIFI_FALLBACK_SSID);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_FALLBACK_SSID, WIFI_FALLBACK_PASSWORD);
+    if (String(WIFI_FALLBACK_SSID).length() > 0) {
+        LOG_WARN(TAG, "Stored WiFi unavailable, trying fixed fallback: " WIFI_FALLBACK_SSID);
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(WIFI_FALLBACK_SSID, WIFI_FALLBACK_PASSWORD);
 
-    unsigned long fallbackStartTime = millis();
-    while (WiFi.status() != WL_CONNECTED) {
-        if (millis() - fallbackStartTime > WIFI_CONNECT_TIMEOUT) {
-            LOG_WARN(TAG, "Connection timeout for fallback: " WIFI_FALLBACK_SSID);
-            break;
+        unsigned long fallbackStartTime = millis();
+        while (WiFi.status() != WL_CONNECTED) {
+            if (millis() - fallbackStartTime > WIFI_CONNECT_TIMEOUT) {
+                LOG_WARN(TAG, "Connection timeout for fallback: " WIFI_FALLBACK_SSID);
+                break;
+            }
+            delay(100);
+            Serial.print(".");
         }
-        delay(100);
-        Serial.print(".");
-    }
 
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println();
-        currentNetworkIndex = WIFI_MAX_CREDENTIALS;
-        connectedOnce = true;
-        reconnectFailureCount = 0;
-        printNetworkInfo();
-        setState(WM_CONNECTED);
-        return true;
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println();
+            currentNetworkIndex = WIFI_MAX_CREDENTIALS;
+            connectedOnce = true;
+            reconnectFailureCount = 0;
+            printNetworkInfo();
+            setState(WM_CONNECTED);
+            return true;
+        }
+    } else {
+        LOG_WARN(TAG, "No fixed fallback WiFi configured");
     }
 
     LOG_ERROR(TAG, "Failed to connect to any stored or fallback network");
@@ -208,7 +194,7 @@ bool WiFiManager::connectToStoredNetwork() {
  * Uživatel se připojí přes mobil/počítač a konfiguruje WiFi přes web
  * 
  * Postup:
- * 1. Generovat jméno (PoolFilter-XXXXXX kde X = chip ID)
+ * 1. Generovat jméno (WIFI_AP_SSID_PREFIX + chip ID)
  * 2. Spustit AP s vlastnim WiFi heslem (WIFI_AP_PASSWORD)
  * 3. Vytvořit WebServer na portu 80 s HTML konfigurátorem
  * 4. Čekat na konfiguraci s timeoutem (AP_MODE_TIMEOUT)
@@ -298,6 +284,14 @@ void WiFiManager::update() {
     if (state == WM_AP_MODE) {
         if (apModeServer != nullptr) {
             apModeServer->handleClient();
+        }
+
+        if (apSaveReconnectPending && static_cast<int32_t>(millis() - apSaveReconnectAt) >= 0) {
+            apSaveReconnectPending = false;
+            LOG_WARN(TAG, "WiFi credentials saved, leaving AP setup mode");
+            stopAPMode();
+            startConnectionSequence();
+            return;
         }
 
         if (millis() - apModeStartTime > (AP_MODE_TIMEOUT * 1000UL)) {
@@ -548,16 +542,18 @@ bool WiFiManager::startNextConnectionCandidate() {
 
     if (nextNetworkIndex == WIFI_MAX_CREDENTIALS) {
         nextNetworkIndex++;
-        LOG_WARN(TAG, "Trying fixed fallback: " WIFI_FALLBACK_SSID);
-        WiFi.disconnect(false);
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(WIFI_FALLBACK_SSID, WIFI_FALLBACK_PASSWORD);
+        if (String(WIFI_FALLBACK_SSID).length() > 0) {
+            LOG_WARN(TAG, "Trying fixed fallback: " WIFI_FALLBACK_SSID);
+            WiFi.disconnect(false);
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(WIFI_FALLBACK_SSID, WIFI_FALLBACK_PASSWORD);
 
-        currentNetworkIndex = WIFI_MAX_CREDENTIALS;
-        connectionAttemptStartTime = millis();
-        lastConnectionAttempt = connectionAttemptStartTime;
-        setState(WM_CONNECTING);
-        return true;
+            currentNetworkIndex = WIFI_MAX_CREDENTIALS;
+            connectionAttemptStartTime = millis();
+            lastConnectionAttempt = connectionAttemptStartTime;
+            setState(WM_CONNECTING);
+            return true;
+        }
     }
 
     connectionSequenceActive = false;
@@ -697,7 +693,7 @@ void WiFiManager::printNetworkInfo() {
  * Uživatel zde zadá SSID, heslo a pozici
  */
 void WiFiManager::handleAPModeRoot() {
-    String html = "<html><head><title>PoolFilter WiFi Setup</title></head><body><h1>PoolFilter WiFi Configuration</h1><p>Select a network and enter password:</p><form action=\"/save\" method=\"POST\">SSID: <input type=\"text\" name=\"ssid\" size=\"32\"><br>Password: <input type=\"password\" name=\"pass\" size=\"32\"><br>Index (0-2): <input type=\"number\" name=\"idx\" value=\"0\" min=\"0\" max=\"2\"><br><input type=\"submit\" value=\"Save WiFi\"></form><a href=\"/scan\">Scan Networks</a><br><a href=\"/status\">Status</a></body></html>";
+    String html = "<html><head><title>WiFiManager Setup</title></head><body><h1>WiFi Configuration</h1><p>Select a network and enter password:</p><form action=\"/save\" method=\"POST\">SSID: <input type=\"text\" name=\"ssid\" size=\"32\"><br>Password: <input type=\"password\" name=\"pass\" size=\"32\"><br>Index (0-2): <input type=\"number\" name=\"idx\" value=\"0\" min=\"0\" max=\"2\"><br><input type=\"submit\" value=\"Save WiFi\"></form><a href=\"/scan\">Scan Networks</a><br><a href=\"/status\">Status</a></body></html>";
     apModeServer->send(200, "text/html", html);
 }
 
@@ -760,8 +756,8 @@ void WiFiManager::handleAPModeSave() {
     if (addWiFiNetwork(ssid, pass, idx)) {
         apModeServer->send(200, "text/html", 
             "<html><body><h2>Saved!</h2><p>WiFi credentials saved. Connecting...</p></body></html>");
-        stopAPMode();
-        startConnectionSequence();
+        apSaveReconnectPending = true;
+        apSaveReconnectAt = millis() + 1000;
     } else {
         // Chyba
         apModeServer->send(400, "text/plain", "Failed to save credentials");

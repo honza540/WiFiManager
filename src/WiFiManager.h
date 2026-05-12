@@ -95,7 +95,7 @@ public:
     /**
      * Spuštění AP módu (přístupový bod)
      * 
-     * Vytvoří WiFi síť s názvem "PoolFilter-XXXXXX" (XXXXXX = chip ID)
+     * Vytvoří WiFi síť s názvem WIFI_AP_SSID_PREFIX + chip ID
      * Heslo: definováno v config.h (WIFI_AP_PASSWORD)
      * 
      * Web server běží na:
@@ -205,6 +205,8 @@ private:
     static uint8_t reconnectFailureCount;
     static bool connectionSequenceActive;
     static bool connectedOnce;
+    static bool apSaveReconnectPending;
+    static unsigned long apSaveReconnectAt;
     
     // Index aktuálně připojené WiFi sítě
     // 0-2 = NVS, WIFI_MAX_CREDENTIALS = fixed fallback.

@@ -3,6 +3,7 @@
 
 // Static member initialization
 BluetoothSerial* BTCommandHandler::serialBT = nullptr;
+bool BTCommandHandler::initialized = false;
 bool BTCommandHandler::btConnected = false;
 String BTCommandHandler::commandBuffer = "";
 unsigned long BTCommandHandler::lastHeartbeat = 0;
@@ -10,9 +11,25 @@ const char* BTCommandHandler::TAG = "BT";
 std::vector<ICommandHandler*> BTCommandHandler::commandHandlers;
 
 void BTCommandHandler::begin() {
-    serialBT = new BluetoothSerial();
+    if (initialized) {
+        return;
+    }
+
+    if (serialBT == nullptr) {
+        serialBT = new BluetoothSerial();
+    }
 
     LOG_INFO(TAG, "Starting Bluetooth with name: " BT_DEVICE_NAME);
+    serialBT->enableSSP();
+    serialBT->onConfirmRequest([](uint32_t numericValue) {
+        LOG_WARN(TAG, "BT SSP confirmation auto-accepted: " + String(numericValue));
+        if (serialBT != nullptr) {
+            serialBT->confirmReply(true);
+        }
+    });
+    serialBT->onAuthComplete([](boolean success) {
+        LOG_WARN(TAG, success ? "BT authentication succeeded" : "BT authentication failed");
+    });
 
     // BluetoothSerial role matters:
     // - Slave/server mode (isMaster=false): ESP32 advertises an SPP service.
@@ -21,14 +38,20 @@ void BTCommandHandler::begin() {
     // - Master/client mode (isMaster=true): ESP32 actively connects to another
     //   Bluetooth SPP server. That is useful for peripherals, but awkward for
     //   a phone terminal because the phone expects to connect to the ESP32.
-    serialBT->setPin(BT_PASSWORD);
     if (!serialBT->begin(BT_DEVICE_NAME, false)) {
         LOG_ERROR(TAG, "Failed to start Bluetooth");
+        delete serialBT;
+        serialBT = nullptr;
         return;
+    }
+
+    if (!serialBT->setPin(BT_PASSWORD)) {
+        LOG_WARN(TAG, "Failed to set Bluetooth PIN");
     }
 
     // Set BT as logger output
     Logger::setBTStream(serialBT);
+    initialized = true;
 
     LOG_INFO(TAG, "Bluetooth started. Pin: " BT_PASSWORD);
     sendResponse("WiFiManager BT Interface Ready");
@@ -46,6 +69,9 @@ void BTCommandHandler::update() {
 
     // Check connection status
     if (serialBT->connected()) {
+        if (!btConnected) {
+            LOG_WARN(TAG, "BT serial client connected");
+        }
         btConnected = true;
         lastHeartbeat = millis();
     } else {

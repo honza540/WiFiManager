@@ -1,4 +1,4 @@
-# WiFi Manager v1.2
+# WiFi Manager v1.3
 
 Reusable WiFi management module for ESP32 projects with persistent credential storage and BT configuration interface.
 
@@ -65,7 +65,7 @@ Or with a specific version:
 
 ```ini
 lib_deps =
-    https://github.com/honza540/WiFiManager.git#v1.2.0
+    https://github.com/honza540/WiFiManager.git#v1.3.0
 ```
 
 ### Manual Installation
@@ -87,8 +87,7 @@ void setup() {
     Serial.begin(115200);
     Logger::debug(TAG_SYS, "Starting...");
     
-    WiFiManager::begin();        // Initialize WiFi
-    BTCommandHandler::begin();   // Initialize Bluetooth
+    WiFiManager::begin();        // Initialize WiFi and built-in Bluetooth console
 }
 
 void loop() {
@@ -107,7 +106,16 @@ Edit `include/config.h` in your project to customize:
 - Log levels
 - Storage namespace
 
-**Compatibility:** Existing projects can keep their current `config.h`; v1.2 provides defaults for the new AP/reconnect macros. You should still add `WIFI_AP_PASSWORD` explicitly when convenient so the setup AP password is not confused with the shorter BT PIN.
+To make the library consume your project `include/config.h`, add a small
+`include/wifimanager_user_config.h` wrapper:
+
+```cpp
+#pragma once
+#include "config.h"
+```
+
+**Compatibility:** The library still ships defaults in its own `include/config.h`.
+Projects can override any macro from `wifimanager_user_config.h`.
 
 **Behavior note:** `WiFiManager::begin()` now starts connection work and returns quickly. Call `WiFiManager::update()` in `loop()` as before, and gate network-dependent application work on `WiFiManager::getState() == WM_CONNECTED` or `WiFi.status() == WL_CONNECTED`.
 
@@ -239,9 +247,9 @@ MIT
 
 ## Author
 
-Developed for PoolFilterWeb project (2026)
+Reusable WiFiManager module (2026)
 
 ---
 
-**Version**: 1.2.0 (Stable)  
+**Version**: 1.3.0 (Stable)
 **Status**: Production Ready for Testing

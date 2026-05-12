@@ -27,6 +27,8 @@ using std::string;
   #endif
 #else
 
+using boolean = bool;
+
 class String {
 public:
     String() : value("") {}
@@ -280,6 +282,16 @@ public:
 class BluetoothSerial : public Stream {
 public:
     BluetoothSerial() : connectedFlag(false) {}
+    void enableSSP() {}
+    void onConfirmRequest(std::function<void(uint32_t)> callback) {
+        confirmCallback = callback;
+    }
+    void confirmReply(bool accepted) {
+        confirmAccepted = accepted;
+    }
+    void onAuthComplete(std::function<void(boolean)> callback) {
+        authCallback = callback;
+    }
     bool begin(const char*, bool) {
         connectedFlag = false;
         return true;
@@ -308,6 +320,9 @@ public:
 
 private:
     bool connectedFlag;
+    bool confirmAccepted = false;
+    std::function<void(uint32_t)> confirmCallback;
+    std::function<void(boolean)> authCallback;
 };
 
 class Preferences {

@@ -1,104 +1,123 @@
-/*
- * WiFiManager Library Configuration
- * 
- * Copy this file to your project's include/ folder and customize as needed.
- * This template shows the required configuration constants.
- */
-
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef WIFIMANAGER_CONFIG_H
+#define WIFIMANAGER_CONFIG_H
 
 #include "version.h"
 
-// ============================================================================
-// VERSION CONSTANTS
-// ============================================================================
+// Optional project-side overrides.
+// Put a wifimanager_user_config.h file in the application include path when
+// the defaults below should be replaced by project-specific values.
+#if defined(__has_include)
+#  if __has_include("wifimanager_user_config.h")
+#    include "wifimanager_user_config.h"
+#  endif
+#endif
 
+#ifndef FIRMWARE_VERSION
 #define FIRMWARE_VERSION "1.0.0"
+#endif
+
+#ifndef WIFIMANAGER_VERSION
 #define WIFIMANAGER_VERSION WIFIMANAGER_VERSION_STRING
+#endif
+
+#ifndef WEB_SERVER_PORT
 #define WEB_SERVER_PORT 80
+#endif
 
-// ============================================================================
-// WIFI MANAGER CONFIGURATION
-// ============================================================================
-
-// Maximální počet WiFi sítí, které lze uložit v NVS (0-2 = 3 sítě max)
+#ifndef WIFI_MAX_CREDENTIALS
 #define WIFI_MAX_CREDENTIALS 3
+#endif
 
-// Pevné fallback WiFi údaje. Neukladají se do NVS, proto nejdou měnit přes BT.
-#define WIFI_FALLBACK_SSID "BeSmarter"
-#define WIFI_FALLBACK_PASSWORD "123456789"
+#ifndef WIFI_FALLBACK_SSID
+#define WIFI_FALLBACK_SSID ""
+#endif
 
-// Konfiguracni AP pro prvotni nastaveni WiFi.
-// Pozor: WPA/WPA2 SoftAP heslo na ESP32 musi mit alespon 8 znaku.
-// BT_PASSWORD muze zustat kratky servisni PIN, ale pro WiFi AP pouzivame
-// samostatne heslo, aby AP skutecne nastartoval v zabezpecenem rezimu.
-#define WIFI_AP_SSID_PREFIX "PoolFilter-"
-#define WIFI_AP_PASSWORD "PoolFilter37"
-#define WIFI_AP_CHANNEL 1
-#define WIFI_AP_MAX_CLIENTS 1
+#ifndef WIFI_FALLBACK_PASSWORD
+#define WIFI_FALLBACK_PASSWORD ""
+#endif
 
-// Timeout pro připojování k jedné WiFi síti (ms)
-// Po uplynutí se zkusí další síť ze seznamu
+#ifndef WIFI_CONNECT_TIMEOUT
 #define WIFI_CONNECT_TIMEOUT 15000
+#endif
 
-// Timeout pro skenování dostupných WiFi sítí (ms)
+#ifndef WIFI_SCAN_TIMEOUT
 #define WIFI_SCAN_TIMEOUT 10000
+#endif
 
-// Reconnect retry backoff. WiFi reconnect bezi neblokujicim stavovym automatem
-// v update(), aby aplikace nemusela cekat v setup()/loop().
+#ifndef WIFI_RECONNECT_BASE_DELAY_MS
 #define WIFI_RECONNECT_BASE_DELAY_MS 5000
+#endif
+
+#ifndef WIFI_RECONNECT_MAX_DELAY_MS
 #define WIFI_RECONNECT_MAX_DELAY_MS 60000
+#endif
 
-// Timeout pro AP mode (sekundy) - jak dlouho čekat na konfiguraci přes web
-// Pokud v tomto case neprijde konfigurace, AP se vypne a WiFi zkusi reconnect.
+#ifndef AP_MODE_TIMEOUT
 #define AP_MODE_TIMEOUT 300
+#endif
 
-// ============================================================================
-// BLUETOOTH CONFIGURATION
-// ============================================================================
+#ifndef WIFI_AP_SSID_PREFIX
+#define WIFI_AP_SSID_PREFIX "WiFiManager-"
+#endif
 
-// Jméno Bluetooth zařízení (viditelné při párování)
-#define BT_DEVICE_NAME "PoolFilter"
+#ifndef WIFI_AP_PASSWORD
+#define WIFI_AP_PASSWORD "wifisetup"
+#endif
 
-// Heslo pro připojení přes BT (PIN kód)
-#define BT_PASSWORD "37"
+#ifndef WIFI_AP_CHANNEL
+#define WIFI_AP_CHANNEL 1
+#endif
 
-// ============================================================================
-// LOGGER CONFIGURATION
-// ============================================================================
+#ifndef WIFI_AP_MAX_CLIENTS
+#define WIFI_AP_MAX_CLIENTS 1
+#endif
 
-// Úrovně logování - jaké zprávy se mají vypsat
-// DEBUG (4): detailní informace pro vývojáře
-// INFO (3): důležité informace
-// WARN (2): varování
-// ERROR (1): chyby
-// NONE (0): nic se nevypisuje
+#ifndef BT_DEVICE_NAME
+#define BT_DEVICE_NAME "BT-WiFiManager"
+#endif
+
+#ifndef BT_PASSWORD
+#define BT_PASSWORD "0000"
+#endif
+
+#ifndef LOG_LEVEL_DEBUG
 #define LOG_LEVEL_DEBUG 4
+#endif
+
+#ifndef LOG_LEVEL_INFO
 #define LOG_LEVEL_INFO 3
+#endif
+
+#ifndef LOG_LEVEL_WARN
 #define LOG_LEVEL_WARN 2
+#endif
+
+#ifndef LOG_LEVEL_ERROR
 #define LOG_LEVEL_ERROR 1
+#endif
+
+#ifndef LOG_LEVEL_NONE
 #define LOG_LEVEL_NONE 0
+#endif
 
-// Aktuální nastavená úroveň logování
-// Zprávy s nižší prioritou se nebudou vypisovat
+#ifndef CURRENT_LOG_LEVEL
 #define CURRENT_LOG_LEVEL LOG_LEVEL_DEBUG
+#endif
 
-// Povolit výstup logů na seriovou linku (Serial console)
+#ifndef LOG_TO_SERIAL
 #define LOG_TO_SERIAL 1
+#endif
 
-// Povolit výstup logů na Bluetooth
+#ifndef LOG_TO_BT
 #define LOG_TO_BT 1
+#endif
 
-// Velikost bufferu pro log zprávy (znaky)
+#ifndef LOG_BUFFER_SIZE
 #define LOG_BUFFER_SIZE 256
+#endif
 
-// ============================================================================
-// STORAGE (Preferences/NVS)
-// ============================================================================
+#ifndef NVRAM_NAMESPACE
+#define NVRAM_NAMESPACE "wifimanager"
+#endif
 
-// Namespace pro uložení WiFi údajů v NVS paměti
-// NVS = Non-Volatile Storage (flash paměť s klíč-hodnotou)
-#define NVRAM_NAMESPACE "poolfilter"
-
-#endif // CONFIG_H
+#endif // WIFIMANAGER_CONFIG_H

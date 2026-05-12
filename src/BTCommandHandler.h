@@ -34,7 +34,7 @@ public:
     // Get BT serial stream for logger and external use
     static BluetoothSerial* getSerialStream();
 
-    // Register external command handler (e.g., WiFiManagerCommands, PoolFilterCommands)
+    // Register external command handler (e.g., WiFiManagerCommands or project commands)
     static void registerCommandHandler(ICommandHandler* handler);
 
     // Send response via BT (used by command handlers)
@@ -45,6 +45,7 @@ public:
 
 private:
     static BluetoothSerial* serialBT;
+    static bool initialized;
     static bool btConnected;
     static String commandBuffer;
     static unsigned long lastHeartbeat;
