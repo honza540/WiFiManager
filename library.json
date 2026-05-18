@@ -1,6 +1,6 @@
 {
   "name": "WiFiManager",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Reusable WiFi management module for ESP32 projects with persistent credential storage, modular BT command handlers, and extensible interface",
   "keywords": ["wifi", "esp32", "bluetooth", "nvs", "persistence", "storage"],
   "authors": [

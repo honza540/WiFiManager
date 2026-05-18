@@ -5,14 +5,19 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
-// 1.4.0 - BT WiFi apply flow, console audit logging, and BeSmarter defaults
+// 1.4.1 - Source layout refactor and host Arduino shim split
 
 #define WIFIMANAGER_VERSION_MAJOR 1
 #define WIFIMANAGER_VERSION_MINOR 4
-#define WIFIMANAGER_VERSION_PATCH 0
-#define WIFIMANAGER_VERSION_STRING "1.4.0"
+#define WIFIMANAGER_VERSION_PATCH 1
+#define WIFIMANAGER_VERSION_STRING "1.4.1"
 
 // Changelog:
+// v1.4.1 (2026-05-18)
+//   - Split WiFiManager implementation by responsibility for easier maintenance
+//   - Split WiFiManagerCommands into routing, WiFi config, and monitoring files
+//   - Split native ArduinoHost stubs into focused headers for tests
+//
 // v1.4.0 (2026-05-18)
 //   - wifi-set now saves credentials and immediately tries to connect to them
 //   - Failed BT credential changes restore the previous WiFi when possible
