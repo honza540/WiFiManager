@@ -5,14 +5,22 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
-// 1.3.0 - Built-in BT startup, safer AP save flow, and project config override
+// 1.4.0 - BT WiFi apply flow, console audit logging, and BeSmarter defaults
 
 #define WIFIMANAGER_VERSION_MAJOR 1
-#define WIFIMANAGER_VERSION_MINOR 3
+#define WIFIMANAGER_VERSION_MINOR 4
 #define WIFIMANAGER_VERSION_PATCH 0
-#define WIFIMANAGER_VERSION_STRING "1.3.0"
+#define WIFIMANAGER_VERSION_STRING "1.4.0"
 
 // Changelog:
+// v1.4.0 (2026-05-18)
+//   - wifi-set now saves credentials and immediately tries to connect to them
+//   - Failed BT credential changes restore the previous WiFi when possible
+//   - Failed new/overwritten credentials fall back to setup AP mode
+//   - BT console input/output/error audit logs use Console IN/OUT/ERR prefixes
+//   - wifi-set passwords are masked in BT console audit logs
+//   - Defaults updated for BeSmarter fallback, setup AP, and BT device naming
+//
 // v1.3.0 (2026-05-13)
 //   - WiFiManager::begin() starts the built-in Bluetooth service console
 //   - BTCommandHandler::begin() is idempotent and cleans up failed starts

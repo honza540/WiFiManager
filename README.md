@@ -1,4 +1,4 @@
-# WiFi Manager v1.3
+# WiFi Manager v1.4
 
 Reusable WiFi management module for ESP32 projects with persistent credential storage and BT configuration interface.
 
@@ -24,7 +24,7 @@ Reusable WiFi management module for ESP32 projects with persistent credential st
 - AP timeout returns to reconnect loop instead of rebooting the board
 
 ✅ **Bluetooth Interface**
-- Command-based control via BT (password: "37")
+- Command-based control via BT (PIN: "0000")
 - ESP32 runs as Bluetooth SPP server/slave so phones connect to it as a console
 - Monitor WiFi status
 - Save/list/clear credentials
@@ -65,7 +65,7 @@ Or with a specific version:
 
 ```ini
 lib_deps =
-    https://github.com/honza540/WiFiManager.git#v1.3.0
+    https://github.com/honza540/WiFiManager.git#v1.4.0
 ```
 
 ### Manual Installation
@@ -251,5 +251,5 @@ Reusable WiFiManager module (2026)
 
 ---
 
-**Version**: 1.3.0 (Stable)
+**Version**: 1.4.0 (Stable)
 **Status**: Production Ready for Testing
