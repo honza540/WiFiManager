@@ -1,6 +1,12 @@
 #include "BTCommandHandler.h"
 #include "WiFiManagerCommands.h"
 
+#if BT_CONSOLE_AUTH_ENABLED
+#define BT_CONSOLE_AUTH_PASSWORD_VALUE BT_CONSOLE_PASSWORD
+#else
+#define BT_CONSOLE_AUTH_PASSWORD_VALUE ""
+#endif
+
 // Static member initialization
 BluetoothSerial* BTCommandHandler::serialBT = nullptr;
 bool BTCommandHandler::initialized = false;
@@ -10,6 +16,7 @@ unsigned long BTCommandHandler::lastHeartbeat = 0;
 const char* BTCommandHandler::TAG = "BT";
 std::vector<ICommandHandler*> BTCommandHandler::commandHandlers;
 ICommandHandler* BTCommandHandler::wifiCommandHandler = nullptr;
+BTConsoleAuth BTCommandHandler::consoleAuth;
 
 void BTCommandHandler::begin() {
     if (initialized) {
@@ -52,6 +59,11 @@ void BTCommandHandler::begin() {
 
     // Set BT as logger output
     Logger::setBTStream(serialBT);
+    consoleAuth.configure(BT_CONSOLE_AUTH_ENABLED != 0,
+                          BT_CONSOLE_AUTH_PASSWORD_VALUE,
+                          BT_CONSOLE_AUTH_TIMEOUT_MS,
+                          BT_CONSOLE_AUTH_MAX_ATTEMPTS);
+    updateBTOutputGate();
     initialized = true;
 
     LOG_INFO(TAG, "Bluetooth started. Pin: " BT_PASSWORD);
@@ -69,18 +81,9 @@ void BTCommandHandler::update() {
         return;
     }
 
-    // Check connection status
-    if (serialBT->connected()) {
-        if (!btConnected) {
-            LOG_WARN(TAG, "BT serial client connected");
-        }
-        btConnected = true;
-        lastHeartbeat = millis();
-    } else {
-        if (btConnected) {
-            LOG_WARN(TAG, "BT disconnected");
-            btConnected = false;
-        }
+    handleConnectionState();
+    if (btConnected) {
+        handleAuthTimeout();
     }
 
     // Read incoming data
@@ -89,12 +92,18 @@ void BTCommandHandler::update() {
 
         if (c == '\r' || c == '\n') {
             if (commandBuffer.length() > 0) {
-                parseCommand(commandBuffer);
+                if (consoleAuth.allowsConsole()) {
+                    parseCommand(commandBuffer);
+                } else {
+                    handleAuthInput(commandBuffer);
+                }
                 commandBuffer = "";
             }
         } else if (c >= 32 && c < 127) { // Printable characters
             commandBuffer += c;
-            serialBT->print(c); // Echo
+            if (consoleAuth.allowsConsole()) {
+                serialBT->print(c); // Echo
+            }
         }
     }
 }
@@ -104,6 +113,10 @@ bool BTCommandHandler::isConnected() {
 }
 
 BluetoothSerial* BTCommandHandler::getSerialStream() {
+    if (serialBT == nullptr || !consoleAuth.allowsConsole()) {
+        return nullptr;
+    }
+
     return serialBT;
 }
 
@@ -196,7 +209,7 @@ System:
 }
 
 void BTCommandHandler::sendResponse(const String &message, bool newline) {
-    if (serialBT != nullptr && serialBT->connected()) {
+    if (serialBT != nullptr && serialBT->connected() && consoleAuth.allowsConsole()) {
         logConsoleOutput(message, false);
         if (newline) {
             serialBT->println(message);
@@ -207,11 +220,132 @@ void BTCommandHandler::sendResponse(const String &message, bool newline) {
 }
 
 void BTCommandHandler::sendError(const String &message) {
-    if (serialBT != nullptr && serialBT->connected()) {
+    if (serialBT != nullptr && serialBT->connected() && consoleAuth.allowsConsole()) {
         logConsoleOutput(message, true);
         serialBT->println("[ERROR] " + message);
     }
 }
+
+void BTCommandHandler::handleConnectionState() {
+    bool connected = serialBT->connected();
+
+    if (connected) {
+        if (!btConnected) {
+            btConnected = true;
+            commandBuffer = "";
+            consoleAuth.beginSession(millis());
+            updateBTOutputGate();
+            LOG_WARN(TAG, "BT serial client connected");
+
+            if (consoleAuth.isEnabled()) {
+                sendAuthPrompt();
+            }
+        }
+
+        lastHeartbeat = millis();
+        return;
+    }
+
+    if (btConnected) {
+        LOG_WARN(TAG, "BT disconnected");
+    }
+
+    btConnected = false;
+    commandBuffer = "";
+    consoleAuth.reset();
+    updateBTOutputGate();
+}
+
+void BTCommandHandler::handleAuthInput(const String& input) {
+    BTConsoleAuth::Result result = consoleAuth.submitPassword(input, millis());
+    updateBTOutputGate();
+
+    switch (result) {
+        case BTConsoleAuth::RESULT_SUCCESS:
+            Logger::log(Logger::WARN, TAG, "BT console authenticated", false);
+            sendResponse("Authenticated");
+            sendReadyAndHelp();
+            break;
+        case BTConsoleAuth::RESULT_FAILED:
+            sendAuthMessage("[ERROR] Authentication failed");
+            sendAuthPrompt();
+            break;
+        case BTConsoleAuth::RESULT_LOCKED:
+            sendAuthMessage("[ERROR] Authentication locked. Disconnect and reconnect to retry.");
+            break;
+        case BTConsoleAuth::RESULT_TIMEOUT:
+            sendAuthMessage("[ERROR] Authentication timed out. Disconnect and reconnect to retry.");
+            break;
+        default:
+            break;
+    }
+}
+
+void BTCommandHandler::handleAuthTimeout() {
+    BTConsoleAuth::Result result = consoleAuth.checkTimeout(millis());
+    if (result == BTConsoleAuth::RESULT_TIMEOUT) {
+        updateBTOutputGate();
+        sendAuthMessage("[ERROR] Authentication timed out. Disconnect and reconnect to retry.");
+    }
+}
+
+void BTCommandHandler::sendAuthPrompt() {
+    sendAuthMessage("BT console password: ", false);
+}
+
+void BTCommandHandler::sendAuthMessage(const String& message, bool newline) {
+    if (serialBT == nullptr || !serialBT->connected()) {
+        return;
+    }
+
+    if (newline) {
+        serialBT->println(message);
+    } else {
+        serialBT->print(message);
+    }
+}
+
+void BTCommandHandler::sendReadyAndHelp() {
+    sendResponse("WiFiManager BT Interface Ready");
+    printHelp();
+}
+
+void BTCommandHandler::updateBTOutputGate() {
+    Logger::setBTOutputAllowed(consoleAuth.allowsConsole());
+}
+
+#ifndef ARDUINO_ARCH_ESP32
+void BTCommandHandler::resetForTest() {
+    if (wifiCommandHandler != nullptr) {
+        delete wifiCommandHandler;
+        wifiCommandHandler = nullptr;
+    }
+
+    commandHandlers.clear();
+
+    if (serialBT != nullptr) {
+        delete serialBT;
+        serialBT = nullptr;
+    }
+
+    initialized = false;
+    btConnected = false;
+    commandBuffer = "";
+    lastHeartbeat = 0;
+    consoleAuth.configure(BT_CONSOLE_AUTH_ENABLED != 0,
+                          BT_CONSOLE_AUTH_PASSWORD_VALUE,
+                          BT_CONSOLE_AUTH_TIMEOUT_MS,
+                          BT_CONSOLE_AUTH_MAX_ATTEMPTS);
+    Logger::setBTStream(nullptr);
+    Logger::setBTOutputAllowed(true);
+}
+
+void BTCommandHandler::configureAuthForTest(bool enabled, const String& password,
+                                            unsigned long timeoutMs, int maxAttempts) {
+    consoleAuth.configure(enabled, password, timeoutMs, maxAttempts);
+    updateBTOutputGate();
+}
+#endif
 
 void BTCommandHandler::logConsoleInput(const String &fullCommand) {
     String sanitized = sanitizeCommandForLog(fullCommand);

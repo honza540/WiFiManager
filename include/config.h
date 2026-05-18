@@ -80,6 +80,22 @@
 #define BT_PASSWORD "0000"
 #endif
 
+#ifndef BT_CONSOLE_AUTH_ENABLED
+#define BT_CONSOLE_AUTH_ENABLED 0
+#endif
+
+#ifndef BT_CONSOLE_AUTH_TIMEOUT_MS
+#define BT_CONSOLE_AUTH_TIMEOUT_MS 30000
+#endif
+
+#ifndef BT_CONSOLE_AUTH_MAX_ATTEMPTS
+#define BT_CONSOLE_AUTH_MAX_ATTEMPTS 3
+#endif
+
+#if BT_CONSOLE_AUTH_ENABLED && !defined(BT_CONSOLE_PASSWORD)
+#error "BT_CONSOLE_PASSWORD must be defined when BT_CONSOLE_AUTH_ENABLED is enabled"
+#endif
+
 #ifndef LOG_LEVEL_DEBUG
 #define LOG_LEVEL_DEBUG 4
 #endif

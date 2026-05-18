@@ -1,6 +1,9 @@
 #include <unity.h>
 #include <Arduino.h>
 #include <map>
+#include "BTCommandHandler.h"
+#include "BTConsoleAuth.h"
+#include "Logger.h"
 
 // Extern declarations for tests in other files so one Unity runner can execute all test cases.
 #ifndef ARDUINO_ARCH_ESP32
@@ -273,6 +276,111 @@ void test_extra_spaces_trimmed() {
     TEST_ASSERT_EQUAL_STRING("", cmd.args.c_str());
 }
 
+#ifndef ARDUINO_ARCH_ESP32
+static BluetoothSerial* start_auth_console_for_test(const String& password,
+                                                    unsigned long timeoutMs = 30000,
+                                                    int maxAttempts = 3) {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::begin();
+    BluetoothSerial* bt = BTCommandHandler::getSerialStream();
+    TEST_ASSERT_NOT_NULL(bt);
+
+    BTCommandHandler::configureAuthForTest(true, password, timeoutMs, maxAttempts);
+    bt->setConnected(true);
+    bt->clearOutput();
+    BTCommandHandler::update();
+    return bt;
+}
+
+void test_bt_auth_prompts_and_blocks_commands_until_password() {
+    BluetoothSerial* bt = start_auth_console_for_test("secret");
+
+    TEST_ASSERT_TRUE(bt->getOutput().indexOf("BT console password:") >= 0);
+
+    bt->clearOutput();
+    bt->queueInput("help\n");
+    BTCommandHandler::update();
+
+    String output = bt->getOutput();
+    TEST_ASSERT_TRUE(output.indexOf("Authentication failed") >= 0);
+    TEST_ASSERT_TRUE(output.indexOf("WiFiManager BT Command Help") < 0);
+    TEST_ASSERT_TRUE(output.indexOf("help") < 0);
+}
+
+void test_bt_auth_accepts_password_then_allows_help() {
+    BluetoothSerial* bt = start_auth_console_for_test("secret");
+
+    TEST_ASSERT_NULL(BTCommandHandler::getSerialStream());
+
+    bt->clearOutput();
+    bt->queueInput("secret\n");
+    BTCommandHandler::update();
+
+    TEST_ASSERT_NOT_NULL(BTCommandHandler::getSerialStream());
+
+    String output = bt->getOutput();
+    TEST_ASSERT_TRUE(output.indexOf("Authenticated") >= 0);
+    TEST_ASSERT_TRUE(output.indexOf("WiFiManager BT Interface Ready") >= 0);
+    TEST_ASSERT_TRUE(output.indexOf("WiFiManager BT Command Help") >= 0);
+    TEST_ASSERT_TRUE(output.indexOf("secret") < 0);
+
+    bt->clearOutput();
+    bt->queueInput("help\n");
+    BTCommandHandler::update();
+
+    output = bt->getOutput();
+    TEST_ASSERT_TRUE(output.indexOf("help") >= 0);
+    TEST_ASSERT_TRUE(output.indexOf("WiFiManager BT Command Help") >= 0);
+}
+
+void test_bt_auth_locks_after_max_attempts() {
+    BluetoothSerial* bt = start_auth_console_for_test("secret", 30000, 1);
+
+    bt->clearOutput();
+    bt->queueInput("wrong\n");
+    BTCommandHandler::update();
+
+    String output = bt->getOutput();
+    TEST_ASSERT_TRUE(output.indexOf("Authentication locked") >= 0);
+
+    bt->clearOutput();
+    bt->queueInput("secret\n");
+    BTCommandHandler::update();
+
+    output = bt->getOutput();
+    TEST_ASSERT_TRUE(output.indexOf("Authenticated") < 0);
+    TEST_ASSERT_TRUE(output.indexOf("WiFiManager BT Command Help") < 0);
+}
+
+void test_bt_auth_suppresses_bt_logs_until_authenticated() {
+    BluetoothSerial* bt = start_auth_console_for_test("secret");
+
+    bt->clearOutput();
+    Logger::enableBT(true);
+    LOG_INFO("TST", "hidden-before-auth");
+
+    TEST_ASSERT_TRUE(bt->getOutput().indexOf("hidden-before-auth") < 0);
+
+    bt->queueInput("secret\n");
+    BTCommandHandler::update();
+    bt->clearOutput();
+
+    LOG_INFO("TST", "visible-after-auth");
+
+    TEST_ASSERT_TRUE(bt->getOutput().indexOf("visible-after-auth") >= 0);
+}
+
+void test_bt_console_auth_timeout_locks_session() {
+    BTConsoleAuth auth;
+    auth.configure(true, "secret", 1000, 3);
+    auth.beginSession(100);
+
+    TEST_ASSERT_EQUAL(BTConsoleAuth::RESULT_TIMEOUT, auth.checkTimeout(1100));
+    TEST_ASSERT_TRUE(auth.isLocked());
+    TEST_ASSERT_FALSE(auth.allowsConsole());
+}
+#endif
+
 void runAllTests() {
     RUN_TEST(test_parse_help_command);
     RUN_TEST(test_parse_status_command);
@@ -285,6 +393,14 @@ void runAllTests() {
     RUN_TEST(test_command_mixed_case_converted);
     RUN_TEST(test_command_help_any_case);
     RUN_TEST(test_extra_spaces_trimmed);
+
+#ifndef ARDUINO_ARCH_ESP32
+    RUN_TEST(test_bt_auth_prompts_and_blocks_commands_until_password);
+    RUN_TEST(test_bt_auth_accepts_password_then_allows_help);
+    RUN_TEST(test_bt_auth_locks_after_max_attempts);
+    RUN_TEST(test_bt_auth_suppresses_bt_logs_until_authenticated);
+    RUN_TEST(test_bt_console_auth_timeout_locks_session);
+#endif
 
     // Delegate to other test groups if available
 #ifndef ARDUINO_ARCH_ESP32

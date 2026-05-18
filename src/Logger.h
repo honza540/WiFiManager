@@ -46,6 +46,7 @@ public:
     
     // Zapnutí/vypnutí výstupu na Bluetooth
     static void enableBT(bool enable);
+    static void setBTOutputAllowed(bool allow);
 
     // Zjištění aktuální úrovně logování
     static Level getCurrentLevel();
@@ -63,6 +64,7 @@ private:
     // Příznaky zda se má logovat na sériový port a BT
     static bool serialEnabled;
     static bool btEnabled;
+    static bool btOutputAllowed;
     
     // Vytvoření časového razítka (ms od startu)
     static String getTimestamp();

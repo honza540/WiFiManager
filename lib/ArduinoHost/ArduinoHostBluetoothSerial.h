@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <string>
 
 // ============================================================================
 // BLUETOOTH SERIAL STUB
@@ -13,7 +14,7 @@
 
 class BluetoothSerial : public Stream {
 public:
-    BluetoothSerial() : connectedFlag(false) {}
+    BluetoothSerial() : connectedFlag(false), rxPos(0) {}
     void enableSSP() {}
     void onConfirmRequest(std::function<void(uint32_t)> callback) {
         confirmCallback = callback;
@@ -35,19 +36,44 @@ public:
         return connectedFlag;
     }
     size_t available() const {
-        return 0;
+        return rxBuffer.size() - rxPos;
     }
     char read() {
-        return 0;
+        if (rxPos >= rxBuffer.size()) {
+            return 0;
+        }
+        char c = rxBuffer[rxPos++];
+        if (rxPos >= rxBuffer.size()) {
+            rxBuffer.clear();
+            rxPos = 0;
+        }
+        return c;
     }
     void print(const String& msg) override {
-        (void)msg;
+        txBuffer += msg.c_str();
     }
     void print(char c) {
-        (void)c;
+        txBuffer += c;
     }
-    void println(const String& msg) {
-        (void)msg;
+    void println(const String& msg) override {
+        txBuffer += msg.c_str();
+        txBuffer += '\n';
+    }
+
+    void setConnected(bool connected) {
+        connectedFlag = connected;
+    }
+
+    void queueInput(const String& input) {
+        rxBuffer += input.c_str();
+    }
+
+    void clearOutput() {
+        txBuffer.clear();
+    }
+
+    String getOutput() const {
+        return String(txBuffer);
     }
 
 private:
@@ -55,6 +81,9 @@ private:
     bool confirmAccepted = false;
     std::function<void(uint32_t)> confirmCallback;
     std::function<void(boolean)> authCallback;
+    std::string rxBuffer;
+    size_t rxPos;
+    std::string txBuffer;
 };
 
 #endif // ARDUINO_HOST_BLUETOOTH_SERIAL_H

@@ -13,6 +13,7 @@ bool Logger::serialEnabled = true;
 
 // Příznak zda se loguje na Bluetooth (výchozí: NE, zapne se až když se BT připojí)
 bool Logger::btEnabled = false;
+bool Logger::btOutputAllowed = true;
 
 // ============================================================================
 // PUBLIC METHODS - Veřejné metody třídy
@@ -50,7 +51,7 @@ void Logger::log(Level level, const String &tag, const String &message, bool inc
     }
 
     // Odeslání na Bluetooth (vidět v BT terminálu)
-    if (includeBT && btEnabled && btStream != nullptr) {
+    if (includeBT && btEnabled && btOutputAllowed && btStream != nullptr) {
         btStream->println(logMessage);
     }
 }
@@ -97,6 +98,10 @@ void Logger::enableBT(bool enable) {
     btEnabled = enable;
 }
 
+void Logger::setBTOutputAllowed(bool allow) {
+    btOutputAllowed = allow;
+}
+
 // Vrátit aktuální nastavenou úroveň logování
 Logger::Level Logger::getCurrentLevel() {
     return (Level)CURRENT_LOG_LEVEL;
@@ -111,9 +116,11 @@ void Logger::setBTStream(Stream* stream) {
     btStream = stream;
     if (stream != nullptr) {
         btEnabled = true;
+        btOutputAllowed = true;
         LOG_INFO(TAG_SYS, "BT Logger enabled");
     } else {
         btEnabled = false;
+        btOutputAllowed = false;
     }
 }
 

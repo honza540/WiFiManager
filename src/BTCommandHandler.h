@@ -7,6 +7,7 @@
 #include "config.h"
 #include "Logger.h"
 #include "ICommandHandler.h"
+#include "BTConsoleAuth.h"
 
 /**
  * Bluetooth Command Handler
@@ -31,7 +32,7 @@ public:
     // Check if BT is connected
     static bool isConnected();
 
-    // Get BT serial stream for logger and external use
+    // Get BT serial stream for external use (nullptr until console auth passes)
     static BluetoothSerial* getSerialStream();
 
     // Register external command handler (e.g., WiFiManagerCommands or project commands)
@@ -43,6 +44,13 @@ public:
     // Send error via BT (used by command handlers)
     static void sendError(const String &message);
 
+#ifndef ARDUINO_ARCH_ESP32
+    static void resetForTest();
+    static void configureAuthForTest(bool enabled, const String& password,
+                                     unsigned long timeoutMs = BT_CONSOLE_AUTH_TIMEOUT_MS,
+                                     int maxAttempts = BT_CONSOLE_AUTH_MAX_ATTEMPTS);
+#endif
+
 private:
     static BluetoothSerial* serialBT;
     static bool initialized;
@@ -52,6 +60,7 @@ private:
     static const char* TAG;
     static std::vector<ICommandHandler*> commandHandlers;
     static ICommandHandler* wifiCommandHandler;
+    static BTConsoleAuth consoleAuth;
 
     // Command parsing and execution
     static void parseCommand(const String &command);
@@ -63,6 +72,13 @@ private:
 
     // Helper methods
     static void printHelp();
+    static void handleConnectionState();
+    static void handleAuthInput(const String& input);
+    static void handleAuthTimeout();
+    static void sendAuthPrompt();
+    static void sendAuthMessage(const String& message, bool newline = true);
+    static void sendReadyAndHelp();
+    static void updateBTOutputGate();
     static void logConsoleInput(const String &fullCommand);
     static void logConsoleOutput(const String &message, bool error);
     static void logConsoleText(Logger::Level level, const String &prefix, const String &message);
