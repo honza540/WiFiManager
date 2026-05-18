@@ -228,20 +228,29 @@ class WiFiClass {
 public:
     WiFiClass() : connected(true), scanResultCount(0) {}
 
-    void mode(int) {}
-    void begin(const char*, const char*) { connected = true; }
+    void mode(int newMode) { currentMode = newMode; }
+    void begin(const char* ssid, const char* password) {
+        lastBeginSSID = ssid ? ssid : "";
+        lastBeginPassword = password ? password : "";
+        currentSSID = lastBeginSSID;
+        connected = connectOnBegin;
+    }
     int status() const { return connected ? WL_CONNECTED : 0; }
     int RSSI() const { return -50; }
     int RSSI(int) const { return -50; }
     int channel() const { return 1; }
-    bool softAP(const char*, const char*, int = 1, int = 0, int = 4, bool = false) { return true; }
+    bool softAP(const char* ssid, const char* password, int = 1, int = 0, int = 4, bool = false) {
+        lastSoftAPSSID = ssid ? ssid : "";
+        lastSoftAPPassword = password ? password : "";
+        return softAPResult;
+    }
     IPAddress softAPIP() const { return IPAddress(192,168,4,1); }
     void softAPdisconnect(bool) {}
     void disconnect(bool) { connected = false; }
     void scanNetworks(bool) { scanResultCount = 0; }
     int scanComplete() { return scanResultCount; }
     void scanDelete() {}
-    String SSID() const { return "MockSSID"; }
+    String SSID() const { return currentSSID.length() > 0 ? currentSSID : String("MockSSID"); }
     String SSID(int) const { return "MockSSID"; }
     IPAddress localIP() const { return IPAddress(192,168,1,100); }
     String macAddress() const { return "AA:BB:CC:DD:EE:FF"; }
@@ -251,9 +260,54 @@ public:
     IPAddress dnsIP() const { return IPAddress(8,8,8,8); }
     uint8_t encryptionType(int) const { return WIFI_AUTH_OPEN; }
 
+    void resetMock() {
+        connected = true;
+        connectOnBegin = true;
+        softAPResult = true;
+        currentMode = 0;
+        scanResultCount = 0;
+        currentSSID = "";
+        lastBeginSSID = "";
+        lastBeginPassword = "";
+        lastSoftAPSSID = "";
+        lastSoftAPPassword = "";
+    }
+    void setConnectOnBegin(bool value) {
+        connectOnBegin = value;
+    }
+    void setConnected(bool value) {
+        connected = value;
+    }
+    void setSoftAPResult(bool value) {
+        softAPResult = value;
+    }
+    int getMode() const {
+        return currentMode;
+    }
+    String getLastBeginSSID() const {
+        return lastBeginSSID;
+    }
+    String getLastBeginPassword() const {
+        return lastBeginPassword;
+    }
+    String getLastSoftAPSSID() const {
+        return lastSoftAPSSID;
+    }
+    String getLastSoftAPPassword() const {
+        return lastSoftAPPassword;
+    }
+
 private:
     bool connected;
+    bool connectOnBegin = true;
+    bool softAPResult = true;
+    int currentMode = 0;
     int scanResultCount;
+    String currentSSID = "";
+    String lastBeginSSID = "";
+    String lastBeginPassword = "";
+    String lastSoftAPSSID = "";
+    String lastSoftAPPassword = "";
 };
 
 extern WiFiClass WiFi;
@@ -269,14 +323,81 @@ enum HTTPMethod {
 
 class WebServer {
 public:
-    explicit WebServer(int) {}
-    void on(const char*, HTTPMethod, THandlerFunction) {}
-    void begin() {}
+    explicit WebServer(int port) : serverPort(port) {}
+    void on(const char* uri, HTTPMethod method, THandlerFunction handler) {
+        routes[routeKey(uri, method)] = handler;
+    }
+    void begin() {
+        startedFlag = true;
+    }
     void handleClient() {}
-    void stop() {}
-    void send(int, const char*, const String&) {}
-    bool hasArg(const char*) const { return false; }
-    String arg(const char*) const { return ""; }
+    void stop() {
+        startedFlag = false;
+    }
+    void send(int code, const char* contentType, const String& content) {
+        lastStatusCode = code;
+        lastContentType = contentType;
+        lastBody = content;
+    }
+    bool hasArg(const char* name) const {
+        return args.find(name ? name : "") != args.end();
+    }
+    String arg(const char* name) const {
+        auto it = args.find(name ? name : "");
+        return it != args.end() ? it->second : String("");
+    }
+
+    bool isStarted() const {
+        return startedFlag;
+    }
+    int port() const {
+        return serverPort;
+    }
+    bool routeRegistered(const char* uri, HTTPMethod method) const {
+        return routes.find(routeKey(uri, method)) != routes.end();
+    }
+    void setArg(const char* name, const String& value) {
+        args[name ? name : ""] = value;
+    }
+    void clearArgs() {
+        args.clear();
+    }
+    bool simulateRequest(const char* uri, HTTPMethod method) {
+        clearLastResponse();
+        auto it = routes.find(routeKey(uri, method));
+        if (it == routes.end()) {
+            return false;
+        }
+        it->second();
+        return true;
+    }
+    int getLastStatusCode() const {
+        return lastStatusCode;
+    }
+    String getLastContentType() const {
+        return lastContentType;
+    }
+    String getLastBody() const {
+        return lastBody;
+    }
+    void clearLastResponse() {
+        lastStatusCode = 0;
+        lastContentType = "";
+        lastBody = "";
+    }
+
+private:
+    static string routeKey(const char* uri, HTTPMethod method) {
+        return std::to_string(static_cast<int>(method)) + ":" + (uri ? uri : "");
+    }
+
+    int serverPort;
+    bool startedFlag = false;
+    int lastStatusCode = 0;
+    String lastContentType = "";
+    String lastBody = "";
+    std::map<string, THandlerFunction> routes;
+    std::map<string, String> args;
 };
 
 class BluetoothSerial : public Stream {

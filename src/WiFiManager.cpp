@@ -1,5 +1,6 @@
 #include "WiFiManager.h"
 #include "BTCommandHandler.h"
+#include "WiFiManagerWebTemplates.h"
 #include <WebServer.h>
 
 // ============================================================================
@@ -829,8 +830,7 @@ void WiFiManager::printNetworkInfo() {
  * Uživatel zde zadá SSID, heslo a pozici
  */
 void WiFiManager::handleAPModeRoot() {
-    String html = "<html><head><title>WiFiManager Setup</title></head><body><h1>WiFi Configuration</h1><p>Select a network and enter password:</p><form action=\"/save\" method=\"POST\">SSID: <input type=\"text\" name=\"ssid\" size=\"32\"><br>Password: <input type=\"password\" name=\"pass\" size=\"32\"><br>Index (0-2): <input type=\"number\" name=\"idx\" value=\"0\" min=\"0\" max=\"2\"><br><input type=\"submit\" value=\"Save WiFi\"></form><a href=\"/scan\">Scan Networks</a><br><a href=\"/status\">Status</a></body></html>";
-    apModeServer->send(200, "text/html", html);
+    apModeServer->send(200, "text/html", WiFiManagerWebTemplates::setupPage());
 }
 
 void WiFiManager::handleAPModeConfig() {
@@ -890,8 +890,7 @@ void WiFiManager::handleAPModeSave() {
 
     // Uložení do NVS
     if (addWiFiNetwork(ssid, pass, idx)) {
-        apModeServer->send(200, "text/html", 
-            "<html><body><h2>Saved!</h2><p>WiFi credentials saved. Connecting...</p></body></html>");
+        apModeServer->send(200, "text/html", WiFiManagerWebTemplates::savedPage());
         apSaveReconnectPending = true;
         apSaveReconnectAt = millis() + 1000;
     } else {

@@ -33,6 +33,21 @@ extern void test_clear_all_credentials();
 extern void test_overwrite_existing_wifi();
 extern void test_special_characters_in_credentials();
 extern void test_spaces_in_ssid();
+extern void test_setup_page_contains_wifi_form_contract();
+extern void test_saved_page_contains_confirmation_contract();
+extern void test_storage_manager_save_load_roundtrip();
+extern void test_storage_manager_rejects_invalid_inputs();
+extern void test_storage_manager_clear_credential_recomputes_count();
+extern void test_storage_manager_load_all_preserves_index_holes();
+extern void test_ap_mode_registers_expected_web_routes();
+extern void test_ap_root_route_returns_setup_page();
+extern void test_ap_status_route_reports_state_and_credential_count();
+extern void test_ap_save_route_rejects_missing_password();
+extern void test_ap_save_route_stores_credentials_and_returns_saved_page();
+extern void test_reconnect_starts_from_requested_stored_index();
+extern void test_reconnect_clamps_invalid_requested_index_to_zero();
+extern void test_reconnect_uses_fixed_fallback_when_no_credentials_exist();
+extern void test_start_ap_mode_does_not_create_server_when_softap_fails();
 
 /**
  * Unit Testy pro BTCommandHandler - parsování příkazů
@@ -301,4 +316,19 @@ void runAllTests() {
     RUN_TEST(test_overwrite_existing_wifi);
     RUN_TEST(test_special_characters_in_credentials);
     RUN_TEST(test_spaces_in_ssid);
+    RUN_TEST(test_setup_page_contains_wifi_form_contract);
+    RUN_TEST(test_saved_page_contains_confirmation_contract);
+    RUN_TEST(test_storage_manager_save_load_roundtrip);
+    RUN_TEST(test_storage_manager_rejects_invalid_inputs);
+    RUN_TEST(test_storage_manager_clear_credential_recomputes_count);
+    RUN_TEST(test_storage_manager_load_all_preserves_index_holes);
+    RUN_TEST(test_ap_mode_registers_expected_web_routes);
+    RUN_TEST(test_ap_root_route_returns_setup_page);
+    RUN_TEST(test_ap_status_route_reports_state_and_credential_count);
+    RUN_TEST(test_ap_save_route_rejects_missing_password);
+    RUN_TEST(test_ap_save_route_stores_credentials_and_returns_saved_page);
+    RUN_TEST(test_reconnect_starts_from_requested_stored_index);
+    RUN_TEST(test_reconnect_clamps_invalid_requested_index_to_zero);
+    RUN_TEST(test_reconnect_uses_fixed_fallback_when_no_credentials_exist);
+    RUN_TEST(test_start_ap_mode_does_not_create_server_when_softap_fails);
 }
