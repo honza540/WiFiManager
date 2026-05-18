@@ -39,17 +39,17 @@ bool WiFiManagerCommands::handleCommand(const String& cmd, const String& args) {
 
 String WiFiManagerCommands::getHelpText() {
     return R"(
-WiFi Configuration:
-  wifi-set <idx> <ssid> <pass>  - Save WiFi credentials
-  wifi-clear <idx>              - Clear WiFi at index
-  wifi-list                     - List stored networks
-  netconnect <idx>              - Connect to stored network
-
 Monitoring:
   status                        - System status
   netstatus                     - Network details
   netmonitor                   - Scan available networks
   live                         - Stream logger output
+
+WiFi Configuration:
+  wifi-set <idx> <ssid> <pass>  - Save WiFi credentials and connect
+  wifi-clear <idx>              - Clear WiFi at index
+  wifi-list                     - List stored networks
+  netconnect <idx>              - Connect to stored network
 )";
 }
 
@@ -72,10 +72,11 @@ void WiFiManagerCommands::cmd_wifiset(const String &args) {
     String ssid = args.substring(space1 + 1, space2);
     String password = args.substring(space2 + 1);
 
-    if (WiFiManager::addWiFiNetwork(ssid, password, index)) {
+    if (WiFiManager::addWiFiNetworkAndConnect(ssid, password, index)) {
         sendResponse("WiFi credentials saved at index " + String(index));
         sendResponse("SSID: " + ssid);
-        sendResponse("Consider rebooting to apply changes.");
+        sendResponse("Connecting to WiFi [" + String(index) + "]: " + ssid);
+        sendResponse("Timeout: " + String(WIFI_CONNECT_TIMEOUT / 1000) + "s");
     } else {
         sendError("Failed to save WiFi credentials");
     }
@@ -183,19 +184,9 @@ void WiFiManagerCommands::cmd_live() {
 }
 
 void WiFiManagerCommands::sendResponse(const String &message, bool newline) {
-    BluetoothSerial* btSerial = BTCommandHandler::getSerialStream();
-    if (btSerial != nullptr && btSerial->connected()) {
-        if (newline) {
-            btSerial->println(message);
-        } else {
-            btSerial->print(message);
-        }
-    }
+    BTCommandHandler::sendResponse(message, newline);
 }
 
 void WiFiManagerCommands::sendError(const String &message) {
-    BluetoothSerial* btSerial = BTCommandHandler::getSerialStream();
-    if (btSerial != nullptr && btSerial->connected()) {
-        btSerial->println("[ERROR] " + message);
-    }
+    BTCommandHandler::sendError(message);
 }

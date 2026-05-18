@@ -27,6 +27,11 @@ bool WiFiManager::connectionSequenceActive = false;
 bool WiFiManager::connectedOnce = false;
 bool WiFiManager::apSaveReconnectPending = false;
 unsigned long WiFiManager::apSaveReconnectAt = 0;
+bool WiFiManager::credentialApplyActive = false;
+bool WiFiManager::credentialApplyRestoringPrevious = false;
+uint8_t WiFiManager::credentialApplyRestoreIndex = WIFI_MAX_CREDENTIALS;
+WiFiCredential WiFiManager::credentialApplyRestoreCredential = {"", "", false};
+String WiFiManager::activeConnectionSSID = "";
 
 // Index aktuálně připojené WiFi sítě (0-2)
 uint8_t WiFiManager::currentNetworkIndex = 0;
@@ -79,6 +84,8 @@ void WiFiManager::requestReconnect(uint8_t startIndex) {
         stopAPMode();
     }
 
+    credentialApplyActive = false;
+    credentialApplyRestoringPrevious = false;
     requestedStartIndex = startIndex < WIFI_MAX_CREDENTIALS ? startIndex : 0;
     reconnectFailureCount = 0;
     nextReconnectAttemptTime = millis();
@@ -302,7 +309,11 @@ void WiFiManager::update() {
     }
 
     if (state == WM_CONNECTING) {
-        handleConnectionProgress();
+        if (credentialApplyActive) {
+            handleCredentialApplyProgress();
+        } else {
+            handleConnectionProgress();
+        }
     }
 
     if (state == WM_RETRY_WAIT && millis() - nextReconnectAttemptTime < 0x80000000UL) {
@@ -495,6 +506,29 @@ bool WiFiManager::addWiFiNetwork(const String &ssid, const String &password, uin
     return false;
 }
 
+bool WiFiManager::addWiFiNetworkAndConnect(const String &ssid, const String &password, uint8_t index) {
+    if (index >= WIFI_MAX_CREDENTIALS) {
+        LOG_ERROR(TAG, "Invalid index for WiFi network");
+        return false;
+    }
+
+    uint8_t restoreIndex = WIFI_MAX_CREDENTIALS;
+    WiFiCredential restoreCredential = {"", "", false};
+
+    if (state == WM_CONNECTED && WiFi.status() == WL_CONNECTED &&
+        currentNetworkIndex < WIFI_MAX_CREDENTIALS && currentNetworkIndex != index) {
+        restoreIndex = currentNetworkIndex;
+        restoreCredential = WiFiStorageManager::loadCredential(restoreIndex);
+    }
+
+    if (!addWiFiNetwork(ssid, password, index)) {
+        return false;
+    }
+
+    startCredentialApply(index, restoreIndex, restoreCredential);
+    return true;
+}
+
 /**
  * Vrátit ukazatel na WebServer (pro přidání vlastních endpointů)
  * @return Ukazatel na WebServer nebo nullptr
@@ -508,6 +542,8 @@ WebServer* WiFiManager::getWebServer() {
 // ============================================================================
 
 void WiFiManager::startConnectionSequence() {
+    credentialApplyActive = false;
+    credentialApplyRestoringPrevious = false;
     connectionSequenceActive = true;
     nextNetworkIndex = requestedStartIndex;
     requestedStartIndex = 0;
@@ -578,6 +614,106 @@ void WiFiManager::handleConnectionProgress() {
     if (!startNextConnectionCandidate()) {
         handleConnectionFailure();
     }
+}
+
+void WiFiManager::startCredentialApply(uint8_t targetIndex, uint8_t restoreIndex, const WiFiCredential &restoreCredential) {
+    if (state == WM_AP_MODE) {
+        stopAPMode();
+    }
+
+    WiFiCredential targetCredential = WiFiStorageManager::loadCredential(targetIndex);
+    credentialApplyActive = true;
+    credentialApplyRestoringPrevious = false;
+    credentialApplyRestoreIndex = restoreIndex;
+    credentialApplyRestoreCredential = restoreCredential;
+    connectionSequenceActive = false;
+    reconnectFailureCount = 0;
+
+    if (!startCredentialConnectionCandidate(targetIndex, targetCredential)) {
+        enterCredentialApplyAPMode("Saved WiFi credential is not available");
+    }
+}
+
+bool WiFiManager::startCredentialConnectionCandidate(uint8_t index, const WiFiCredential &credential) {
+    if (index >= WIFI_MAX_CREDENTIALS || !credential.valid) {
+        return false;
+    }
+
+    activeConnectionSSID = credential.ssid;
+    WiFi.disconnect(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(credential.ssid.c_str(), credential.password.c_str());
+
+    currentNetworkIndex = index;
+    connectionAttemptStartTime = millis();
+    lastConnectionAttempt = connectionAttemptStartTime;
+    setState(WM_CONNECTING);
+    return true;
+}
+
+void WiFiManager::handleCredentialApplyProgress() {
+    if (WiFi.status() == WL_CONNECTED) {
+        String label = credentialApplyRestoringPrevious ?
+            "Reconnected to previous WiFi" : "Connected to saved WiFi";
+
+        credentialApplyActive = false;
+        credentialApplyRestoringPrevious = false;
+        connectionSequenceActive = false;
+        connectedOnce = true;
+        reconnectFailureCount = 0;
+        printNetworkInfo();
+        setState(WM_CONNECTED);
+
+        sendBTStatus(label + " [" + String(currentNetworkIndex) + "]: " + String(WiFi.SSID()));
+        sendBTStatus("IP: " + WiFi.localIP().toString() + " | RSSI: " + String(WiFi.RSSI()) + " dBm");
+        return;
+    }
+
+    if (millis() - connectionAttemptStartTime <= WIFI_CONNECT_TIMEOUT) {
+        return;
+    }
+
+    sendBTStatus("Connection timeout (" + String(WIFI_CONNECT_TIMEOUT / 1000) + "s): [" +
+                 String(currentNetworkIndex) + "] " + activeConnectionSSID);
+    LOG_WARN(TAG, "Connection timeout for: " + activeConnectionSSID);
+
+    if (!credentialApplyRestoringPrevious && credentialApplyRestoreCredential.valid) {
+        credentialApplyRestoringPrevious = true;
+        sendBTStatus("Reconnecting to previous WiFi [" + String(credentialApplyRestoreIndex) + "]: " +
+                     credentialApplyRestoreCredential.ssid);
+
+        if (!startCredentialConnectionCandidate(credentialApplyRestoreIndex, credentialApplyRestoreCredential)) {
+            enterCredentialApplyAPMode("Previous WiFi credential is not available");
+        }
+        return;
+    }
+
+    enterCredentialApplyAPMode(credentialApplyRestoringPrevious ?
+        "Previous WiFi reconnect failed" :
+        "Saved WiFi failed and no previous different index is available");
+}
+
+void WiFiManager::enterCredentialApplyAPMode(const String &reason) {
+    credentialApplyActive = false;
+    credentialApplyRestoringPrevious = false;
+    connectionSequenceActive = false;
+
+    sendBTStatus(reason);
+    sendBTStatus("AP mode starting for WiFi setup");
+    WiFi.disconnect(false);
+    startAPMode();
+
+    if (state == WM_AP_MODE) {
+        String apSSID = String(WIFI_AP_SSID_PREFIX) + String((uint32_t)ESP.getEfuseMac(), HEX);
+        sendBTStatus("AP mode: " + apSSID + " | IP: " + WiFi.softAPIP().toString() +
+                     " | Port: " + String(WEB_SERVER_PORT));
+    } else {
+        sendBTStatus("AP mode failed to start");
+    }
+}
+
+void WiFiManager::sendBTStatus(const String &message) {
+    BTCommandHandler::sendResponse(message);
 }
 
 void WiFiManager::handleConnectionFailure() {

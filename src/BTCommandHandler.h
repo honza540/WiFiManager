@@ -51,6 +51,7 @@ private:
     static unsigned long lastHeartbeat;
     static const char* TAG;
     static std::vector<ICommandHandler*> commandHandlers;
+    static ICommandHandler* wifiCommandHandler;
 
     // Command parsing and execution
     static void parseCommand(const String &command);
@@ -62,6 +63,10 @@ private:
 
     // Helper methods
     static void printHelp();
+    static void logConsoleInput(const String &fullCommand);
+    static void logConsoleOutput(const String &message, bool error);
+    static void logConsoleText(Logger::Level level, const String &prefix, const String &message);
+    static String sanitizeCommandForLog(const String &fullCommand);
 };
 
 #endif // BT_COMMAND_HANDLER_H

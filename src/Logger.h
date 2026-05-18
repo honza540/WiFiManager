@@ -33,6 +33,7 @@ public:
      * @param message - Samotná zpráva
      */
     static void log(Level level, const String &tag, const String &message);
+    static void log(Level level, const String &tag, const String &message, bool includeBT);
     
     // Zkrácené metody pro jednotlivé úrovně
     static void debug(const String &tag, const String &message);

@@ -28,6 +28,10 @@ bool Logger::btEnabled = false;
  * 4. Pošli na Serial a/nebo BT
  */
 void Logger::log(Level level, const String &tag, const String &message) {
+    log(level, tag, message, true);
+}
+
+void Logger::log(Level level, const String &tag, const String &message, bool includeBT) {
     // Kontrola: Je tato zpráva důležitá dost na to, aby se vypsala?
     // Pokud máme nastavenu úroveň INFO, DEBUG zprávy se ignorují
     if (level > CURRENT_LOG_LEVEL) {
@@ -46,7 +50,7 @@ void Logger::log(Level level, const String &tag, const String &message) {
     }
 
     // Odeslání na Bluetooth (vidět v BT terminálu)
-    if (btEnabled && btStream != nullptr) {
+    if (includeBT && btEnabled && btStream != nullptr) {
         btStream->println(logMessage);
     }
 }

@@ -29,11 +29,11 @@
 #endif
 
 #ifndef WIFI_FALLBACK_SSID
-#define WIFI_FALLBACK_SSID ""
+#define WIFI_FALLBACK_SSID "BeSmarter"
 #endif
 
 #ifndef WIFI_FALLBACK_PASSWORD
-#define WIFI_FALLBACK_PASSWORD ""
+#define WIFI_FALLBACK_PASSWORD "123456789"
 #endif
 
 #ifndef WIFI_CONNECT_TIMEOUT
@@ -57,11 +57,11 @@
 #endif
 
 #ifndef WIFI_AP_SSID_PREFIX
-#define WIFI_AP_SSID_PREFIX "WiFiManager-"
+#define WIFI_AP_SSID_PREFIX "AP-BeSmarter-"
 #endif
 
 #ifndef WIFI_AP_PASSWORD
-#define WIFI_AP_PASSWORD "wifisetup"
+#define WIFI_AP_PASSWORD "123456789"
 #endif
 
 #ifndef WIFI_AP_CHANNEL
@@ -73,7 +73,7 @@
 #endif
 
 #ifndef BT_DEVICE_NAME
-#define BT_DEVICE_NAME "BT-WiFiManager"
+#define BT_DEVICE_NAME "BT-BeSmarter"
 #endif
 
 #ifndef BT_PASSWORD

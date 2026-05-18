@@ -124,7 +124,7 @@ Projects can override any macro from `wifimanager_user_config.h`.
 Connect via Bluetooth (password: "37") and type commands:
 
 **Configuration:**
-- `wifi-set 0 MyNetwork MyPassword` - Save WiFi
+- `wifi-set 0 MyNetwork MyPassword` - Save WiFi and connect now
 - `wifi-list` - Show stored networks
 - `wifi-clear 0` - Remove WiFi at index 0
 

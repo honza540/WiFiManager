@@ -9,6 +9,7 @@ String BTCommandHandler::commandBuffer = "";
 unsigned long BTCommandHandler::lastHeartbeat = 0;
 const char* BTCommandHandler::TAG = "BT";
 std::vector<ICommandHandler*> BTCommandHandler::commandHandlers;
+ICommandHandler* BTCommandHandler::wifiCommandHandler = nullptr;
 
 void BTCommandHandler::begin() {
     if (initialized) {
@@ -57,7 +58,8 @@ void BTCommandHandler::begin() {
     sendResponse("WiFiManager BT Interface Ready");
 
     // Register WiFi command handler
-    registerCommandHandler(new WiFiManagerCommands());
+    wifiCommandHandler = new WiFiManagerCommands();
+    registerCommandHandler(wifiCommandHandler);
 
     printHelp();
 }
@@ -127,7 +129,7 @@ void BTCommandHandler::parseCommand(const String &fullCommand) {
     cmd.toLowerCase();
     args.trim();
 
-    LOG_DEBUG(TAG, "Command: " + cmd + " | Args: " + args);
+    logConsoleInput(fullCommand);
 
     executeCommand(cmd, args);
 }
@@ -167,15 +169,26 @@ void BTCommandHandler::printHelp() {
     String help = R"(
 === WiFiManager BT Command Help ===
 
+)";
+    sendResponse(help, false);
+
+    if (wifiCommandHandler != nullptr) {
+        sendResponse(wifiCommandHandler->getHelpText(), false);
+    }
+
+    String systemHelp = R"(
 System:
   help                       - Show this help
   reboot                     - Reboot device
 
 )";
-    sendResponse(help, false);
+    sendResponse(systemHelp, false);
 
-    // Append help from registered handlers
+    // Append help from project/external handlers
     for (ICommandHandler* handler : commandHandlers) {
+        if (handler == wifiCommandHandler) {
+            continue;
+        }
         sendResponse(handler->getHelpText(), false);
     }
 
@@ -184,6 +197,7 @@ System:
 
 void BTCommandHandler::sendResponse(const String &message, bool newline) {
     if (serialBT != nullptr && serialBT->connected()) {
+        logConsoleOutput(message, false);
         if (newline) {
             serialBT->println(message);
         } else {
@@ -194,6 +208,91 @@ void BTCommandHandler::sendResponse(const String &message, bool newline) {
 
 void BTCommandHandler::sendError(const String &message) {
     if (serialBT != nullptr && serialBT->connected()) {
+        logConsoleOutput(message, true);
         serialBT->println("[ERROR] " + message);
     }
+}
+
+void BTCommandHandler::logConsoleInput(const String &fullCommand) {
+    String sanitized = sanitizeCommandForLog(fullCommand);
+    if (sanitized.length() > 0) {
+        Logger::log(Logger::INFO, TAG, "Console IN: " + sanitized, false);
+    }
+}
+
+void BTCommandHandler::logConsoleOutput(const String &message, bool error) {
+    logConsoleText(error ? Logger::WARN : Logger::INFO,
+                   error ? "Console ERR: " : "Console OUT: ",
+                   message);
+}
+
+void BTCommandHandler::logConsoleText(Logger::Level level, const String &prefix, const String &message) {
+    if (message.length() == 0) {
+        Logger::log(level, TAG, prefix + "<empty>", false);
+        return;
+    }
+
+    bool loggedAnyLine = false;
+    int start = 0;
+    int length = message.length();
+
+    for (int i = 0; i <= length; i++) {
+        bool atEnd = i == length;
+        bool atLineBreak = !atEnd && (message[i] == '\n' || message[i] == '\r');
+
+        if (!atEnd && !atLineBreak) {
+            continue;
+        }
+
+        if (i > start) {
+            Logger::log(level, TAG, prefix + message.substring(start, i), false);
+            loggedAnyLine = true;
+        }
+
+        start = i + 1;
+        while (start < length && (message[start] == '\n' || message[start] == '\r')) {
+            start++;
+        }
+        i = start - 1;
+    }
+
+    if (!loggedAnyLine) {
+        Logger::log(level, TAG, prefix + "<blank>", false);
+    }
+}
+
+String BTCommandHandler::sanitizeCommandForLog(const String &fullCommand) {
+    String input = fullCommand;
+    input.trim();
+
+    if (input.length() == 0) {
+        return "";
+    }
+
+    int spacePos = input.indexOf(' ');
+    String cmd = spacePos > 0 ? input.substring(0, spacePos) : input;
+    String args = spacePos > 0 ? input.substring(spacePos + 1) : "";
+    cmd.toLowerCase();
+    args.trim();
+
+    if (!(cmd == "wifi-set")) {
+        return input;
+    }
+
+    int indexEnd = args.indexOf(' ');
+    if (indexEnd < 0) {
+        return cmd + " " + args;
+    }
+
+    String index = args.substring(0, indexEnd);
+    String rest = args.substring(indexEnd + 1);
+    rest.trim();
+
+    int ssidEnd = rest.indexOf(' ');
+    if (ssidEnd < 0) {
+        return cmd + " " + index + " " + rest;
+    }
+
+    String ssid = rest.substring(0, ssidEnd);
+    return cmd + " " + index + " " + ssid + " <masked>";
 }

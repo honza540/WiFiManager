@@ -175,6 +175,14 @@ public:
     static bool addWiFiNetwork(const String &ssid, const String &password, uint8_t index);
 
     /**
+     * Přidat nebo změnit WiFi síť a hned ji zkusit připojit.
+     *
+     * Pokud pokus selže a zařízení bylo předtím připojené k jiné uložené síti,
+     * manager se pokusí vrátit na tuto předchozí síť. Jinak spustí AP mode.
+     */
+    static bool addWiFiNetworkAndConnect(const String &ssid, const String &password, uint8_t index);
+
+    /**
      * Vrátit ukazatel na WebServer objekt
      * Používáno pro přidání vlastních endpointů
      * @return Ukazatel na WebServer nebo nullptr
@@ -207,6 +215,11 @@ private:
     static bool connectedOnce;
     static bool apSaveReconnectPending;
     static unsigned long apSaveReconnectAt;
+    static bool credentialApplyActive;
+    static bool credentialApplyRestoringPrevious;
+    static uint8_t credentialApplyRestoreIndex;
+    static WiFiCredential credentialApplyRestoreCredential;
+    static String activeConnectionSSID;
     
     // Index aktuálně připojené WiFi sítě
     // 0-2 = NVS, WIFI_MAX_CREDENTIALS = fixed fallback.
@@ -230,6 +243,11 @@ private:
     static void startConnectionSequence();
     static bool startNextConnectionCandidate();
     static void handleConnectionProgress();
+    static void startCredentialApply(uint8_t targetIndex, uint8_t restoreIndex, const WiFiCredential &restoreCredential);
+    static bool startCredentialConnectionCandidate(uint8_t index, const WiFiCredential &credential);
+    static void handleCredentialApplyProgress();
+    static void enterCredentialApplyAPMode(const String &reason);
+    static void sendBTStatus(const String &message);
     static void handleConnectionFailure();
     static void scheduleReconnect();
     static unsigned long getReconnectDelayMs();
