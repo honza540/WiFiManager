@@ -25,6 +25,8 @@ void test_ap_mode_registers_expected_web_routes() {
     TEST_ASSERT_TRUE(server->routeRegistered("/config", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/status", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/scan", HTTP_GET));
+    TEST_ASSERT_TRUE(server->routeRegistered("/api/setup", HTTP_GET));
+    TEST_ASSERT_TRUE(server->routeRegistered("/api/scan", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/save", HTTP_POST));
     TEST_ASSERT_FALSE(server->routeRegistered("/save", HTTP_GET));
 
@@ -39,7 +41,9 @@ void test_ap_root_route_returns_setup_page() {
     TEST_ASSERT_EQUAL_INT(200, server->getLastStatusCode());
     TEST_ASSERT_EQUAL_STRING("text/html", server->getLastContentType().c_str());
     assert_contains(server->getLastBody(), "WiFi Configuration");
-    assert_contains(server->getLastBody(), "<form action=\"/save\" method=\"POST\">");
+    assert_contains(server->getLastBody(), "<form action=\"/save\" method=\"POST\"");
+    assert_contains(server->getLastBody(), "AP mode active");
+    assert_contains(server->getLastBody(), "/api/scan");
 
     WiFiManager::stopAPMode();
 }
@@ -53,7 +57,38 @@ void test_ap_status_route_reports_state_and_credential_count() {
     TEST_ASSERT_EQUAL_INT(200, server->getLastStatusCode());
     TEST_ASSERT_EQUAL_STRING("text/plain", server->getLastContentType().c_str());
     assert_contains(server->getLastBody(), "State: AP_MODE");
+    assert_contains(server->getLastBody(), "AP MAC:");
     assert_contains(server->getLastBody(), "Credentials stored: 1");
+
+    WiFiManager::stopAPMode();
+}
+
+void test_ap_setup_api_reports_ap_fallback_and_credentials() {
+    WebServer *server = start_ap_server_for_test();
+    TEST_ASSERT_TRUE(WiFiStorageManager::saveCredential(1, "StoredOne", "pass"));
+
+    TEST_ASSERT_TRUE(server->simulateRequest("/api/setup", HTTP_GET));
+
+    TEST_ASSERT_EQUAL_INT(200, server->getLastStatusCode());
+    TEST_ASSERT_EQUAL_STRING("application/json", server->getLastContentType().c_str());
+    assert_contains(server->getLastBody(), "\"state\":\"AP_MODE\"");
+    assert_contains(server->getLastBody(), "\"fallback\"");
+    assert_contains(server->getLastBody(), WIFI_FALLBACK_SSID);
+    assert_contains(server->getLastBody(), "\"idx\":1");
+    assert_contains(server->getLastBody(), "StoredOne");
+
+    WiFiManager::stopAPMode();
+}
+
+void test_ap_scan_api_returns_json() {
+    WebServer *server = start_ap_server_for_test();
+
+    TEST_ASSERT_TRUE(server->simulateRequest("/api/scan", HTTP_GET));
+
+    TEST_ASSERT_EQUAL_INT(200, server->getLastStatusCode());
+    TEST_ASSERT_EQUAL_STRING("application/json", server->getLastContentType().c_str());
+    assert_contains(server->getLastBody(), "\"scanning\":false");
+    assert_contains(server->getLastBody(), "\"networks\"");
 
     WiFiManager::stopAPMode();
 }

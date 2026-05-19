@@ -45,6 +45,8 @@ extern void test_storage_manager_load_all_preserves_index_holes();
 extern void test_ap_mode_registers_expected_web_routes();
 extern void test_ap_root_route_returns_setup_page();
 extern void test_ap_status_route_reports_state_and_credential_count();
+extern void test_ap_setup_api_reports_ap_fallback_and_credentials();
+extern void test_ap_scan_api_returns_json();
 extern void test_ap_save_route_rejects_missing_password();
 extern void test_ap_save_route_stores_credentials_and_returns_saved_page();
 extern void test_reconnect_starts_from_requested_stored_index();
@@ -441,6 +443,8 @@ void runAllTests() {
     RUN_TEST(test_ap_mode_registers_expected_web_routes);
     RUN_TEST(test_ap_root_route_returns_setup_page);
     RUN_TEST(test_ap_status_route_reports_state_and_credential_count);
+    RUN_TEST(test_ap_setup_api_reports_ap_fallback_and_credentials);
+    RUN_TEST(test_ap_scan_api_returns_json);
     RUN_TEST(test_ap_save_route_rejects_missing_password);
     RUN_TEST(test_ap_save_route_stores_credentials_and_returns_saved_page);
     RUN_TEST(test_reconnect_starts_from_requested_stored_index);

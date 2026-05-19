@@ -19,7 +19,9 @@
   "export": {
     "include": [
       "src/*.h",
-      "include/*.h"
+      "include/*.h",
+      "web/*.html",
+      "tools/*.py"
     ]
   }
 }

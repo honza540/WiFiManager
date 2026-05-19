@@ -1,0 +1,447 @@
+#ifndef WIFI_MANAGER_WEB_ASSETS_H
+#define WIFI_MANAGER_WEB_ASSETS_H
+
+// Generated from web/setup.html and web/saved.html.
+// Run tools/generate_web_assets.py after editing those files.
+namespace WiFiManagerWebAssets {
+static const char kSetupPage[] = R"WMSETUP(<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WiFiManager Setup</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #111827; color: #f9fafb; }
+    main { width: min(880px, calc(100vw - 24px)); margin: 0 auto; padding: 18px 0 28px; }
+    h1 { margin: 0 0 14px; font-size: 28px; font-weight: 700; letter-spacing: 0; }
+    h2 { margin: 0 0 10px; font-size: 17px; font-weight: 700; letter-spacing: 0; }
+    section { background: #172033; border: 1px solid #2c374c; border-radius: 8px; padding: 18px; }
+    .block + .block { margin-top: 20px; }
+    .mode { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #93c5fd; font-size: 14px; font-weight: 700; }
+    .mode-dot { width: 9px; height: 9px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,0.15); }
+    .notice { margin: 0; border-left: 3px solid #60a5fa; padding: 10px 12px; background: #111827; color: #d1d5db; font-size: 14px; line-height: 1.45; }
+    dl { display: grid; grid-template-columns: minmax(110px, auto) minmax(0, 1fr); gap: 7px 14px; margin: 0; color: #d1d5db; font-size: 14px; }
+    dt { color: #9ca3af; }
+    dd { margin: 0; color: #f9fafb; text-align: right; overflow-wrap: anywhere; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid #2c374c; padding: 9px 8px; text-align: left; vertical-align: middle; }
+    th { color: #9ca3af; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    td { color: #f9fafb; }
+    .table-wrap { overflow-x: auto; border: 1px solid #2c374c; border-radius: 8px; }
+    .table-wrap table { min-width: 560px; }
+    .index-cell { width: 62px; color: #93c5fd; font-variant-numeric: tabular-nums; }
+    .muted { color: #9ca3af; }
+    .signal { color: #d1d5db; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .signal.good { color: #86efac; }
+    .signal.fair { color: #fde68a; }
+    .signal.weak { color: #fca5a5; }
+    label { display: block; color: #d1d5db; font-size: 14px; }
+    input[type="text"], input[type="password"] {
+      width: 100%; min-width: 0; border: 1px solid #4b5563; border-radius: 8px;
+      background: #111827; color: #f9fafb; padding: 8px 9px; font: inherit;
+    }
+    input[type="radio"] { width: 17px; height: 17px; margin: 0; accent-color: #60a5fa; }
+    button {
+      border: 1px solid #60a5fa; border-radius: 8px; background: #2563eb; color: #f9fafb;
+      padding: 9px 13px; font: inherit; font-weight: 650; cursor: pointer; white-space: nowrap;
+    }
+    button:hover:not(:disabled) { background: #1d4ed8; }
+    button:disabled { border-color: #4b5563; background: #374151; color: #9ca3af; cursor: not-allowed; }
+    button.secondary { border-color: #4b5563; background: #1f2937; }
+    button.secondary:hover:not(:disabled) { background: #374151; }
+    .manual-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; }
+    .manual-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .slot-picker { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .slot-picker span { color: #9ca3af; font-size: 13px; }
+    .slot-picker label { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: #f9fafb; }
+    .scan-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .scan-state { color: #9ca3af; font-size: 13px; }
+    .network-form { display: grid; grid-template-columns: minmax(135px, 1fr) auto; gap: 8px; align-items: center; }
+    .network-form .slot-picker { grid-column: 1 / -1; }
+    .network-form button { justify-self: end; }
+    .empty-row td { color: #9ca3af; text-align: center; }
+    @media (max-width: 640px) {
+      main { width: min(100vw - 18px, 880px); padding-top: 10px; }
+      section { padding: 14px; }
+      h1 { font-size: 24px; }
+      dl { grid-template-columns: 1fr; gap: 3px; }
+      dd { text-align: left; margin-bottom: 7px; }
+      .manual-form { grid-template-columns: 1fr; }
+      .scan-head { align-items: stretch; flex-direction: column; }
+      .scan-head button { width: 100%; }
+      .network-form { grid-template-columns: 1fr; }
+      .network-form button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>WiFi Configuration</h1>
+    <section>
+      <div class="mode"><span class="mode-dot"></span><span>AP mode active</span></div>
+
+      <div class="block">
+        <dl>
+          <dt>AP SSID</dt><dd id="apSsid">-</dd>
+          <dt>AP password</dt><dd id="apPassword">-</dd>
+          <dt>Security</dt><dd id="apSecurity">-</dd>
+          <dt>AP MAC</dt><dd id="apMac">-</dd>
+          <dt>AP IP</dt><dd id="apIp">-</dd>
+          <dt>Channel</dt><dd id="apChannel">-</dd>
+        </dl>
+      </div>
+
+      <div class="block">
+        <p class="notice">
+          Nechces nic menit v ESP32? Priprav hotspot s fallback parametry:
+          SSID <strong id="fallbackSsid">-</strong>, password <strong id="fallbackPassword">-</strong>.
+        </p>
+      </div>
+
+      <div class="block">
+        <h2>Saved WiFi slots</h2>
+        <div class="table-wrap">
+          <table aria-label="Saved WiFi credentials">
+            <thead>
+              <tr><th>Index</th><th>Saved SSID</th><th>Signal now</th></tr>
+            </thead>
+            <tbody id="credentialRows">
+              <tr class="empty-row"><td colspan="3">Loading saved slots</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2>Manual WiFi entry</h2>
+        <form action="/save" method="POST" class="manual-form" id="manualForm">
+          <label>SSID
+            <input type="text" name="ssid" maxlength="32" autocomplete="off" required>
+          </label>
+          <label>Password
+            <input type="password" name="pass" maxlength="64" autocomplete="current-password">
+          </label>
+          <div class="manual-actions">
+            <div class="slot-picker" role="radiogroup" aria-label="Save index">
+              <span>Save to index</span>
+              <label><input type="radio" name="idx" value="0" checked>0</label>
+              <label><input type="radio" name="idx" value="1">1</label>
+              <label><input type="radio" name="idx" value="2">2</label>
+            </div>
+            <button type="submit">Save manual</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="block">
+        <div class="scan-head">
+          <div>
+            <h2>Nearby WiFi networks</h2>
+            <div class="scan-state" id="scanState">Waiting for scan</div>
+          </div>
+          <button type="button" class="secondary" id="refreshScan">Refresh signal</button>
+        </div>
+        <div class="table-wrap">
+          <table aria-label="Nearby WiFi networks">
+            <thead>
+              <tr><th>SSID</th><th>Signal</th><th>Security</th><th>Password and save</th></tr>
+            </thead>
+            <tbody id="scanRows">
+              <tr class="empty-row"><td colspan="4">No scan data yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const credentialRows = document.getElementById('credentialRows');
+    const scanRows = document.getElementById('scanRows');
+    const scanState = document.getElementById('scanState');
+    const refreshScanButton = document.getElementById('refreshScan');
+    const setup = { credentials: [] };
+    const scanDrafts = {};
+    let lastNetworks = [];
+
+    const previewSetup = {
+      state: 'AP_MODE',
+      ap: {
+        ssid: 'AP-BeSmarter-preview',
+        password: '123456789',
+        security: 'WPA/WPA2',
+        mac: 'FF:EE:DD:CC:BB:AA',
+        ip: '192.168.4.1',
+        channel: 1
+      },
+      fallback: { ssid: 'BeSmarter', password: '123456789' },
+      credentials: [
+        { idx: 0, valid: true, ssid: 'HomeWiFi' },
+        { idx: 1, valid: false, ssid: '' },
+        { idx: 2, valid: false, ssid: '' }
+      ]
+    };
+    const previewScan = {
+      scanning: false,
+      networks: [
+        { ssid: 'HomeWiFi', rssi: -54, encryption: 'Secured' },
+        { ssid: 'Guest', rssi: -71, encryption: 'Open' }
+      ]
+    };
+
+    function setText(id, value) {
+      document.getElementById(id).textContent = value || '-';
+    }
+
+    function createElement(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function signalClass(rssi) {
+      if (rssi >= -60) return 'good';
+      if (rssi >= -75) return 'fair';
+      return 'weak';
+    }
+
+    function formatSignal(rssi) {
+      const value = Number(rssi);
+      return Number.isFinite(value) ? `${value} dBm` : 'not found';
+    }
+
+    function findSignalForSsid(ssid) {
+      let best = null;
+      lastNetworks.forEach(network => {
+        if (network.ssid !== ssid) return;
+        const rssi = Number(network.rssi);
+        if (!Number.isFinite(rssi)) return;
+        if (best === null || rssi > best) best = rssi;
+      });
+      return best;
+    }
+
+    function renderCredentials() {
+      credentialRows.textContent = '';
+      const fragment = document.createDocumentFragment();
+      for (let idx = 0; idx < 3; idx += 1) {
+        const credential = setup.credentials.find(item => Number(item.idx) === idx) || { idx, valid: false, ssid: '' };
+        const row = document.createElement('tr');
+        row.append(createElement('td', 'index-cell', String(idx)));
+        row.append(createElement('td', credential.valid ? '' : 'muted', credential.valid ? credential.ssid : 'empty'));
+
+        const signal = credential.valid ? findSignalForSsid(credential.ssid) : null;
+        const signalCell = createElement('td', `signal ${signal === null ? '' : signalClass(signal)}`, credential.valid ? formatSignal(signal) : '-');
+        row.append(signalCell);
+        fragment.append(row);
+      }
+      credentialRows.append(fragment);
+    }
+
+    function networkKey(network) {
+      return `${network.ssid}|${network.encryption}`;
+    }
+
+    function collectScanDrafts() {
+      scanRows.querySelectorAll('form[data-network-key]').forEach(form => {
+        const key = form.dataset.networkKey;
+        const pass = form.querySelector('input[name="pass"]');
+        const idx = form.querySelector('input[name="idx"]:checked');
+        scanDrafts[key] = {
+          pass: pass ? pass.value : '',
+          idx: idx ? idx.value : '0'
+        };
+      });
+    }
+
+    function createSlotPicker(name, selectedValue) {
+      const picker = createElement('div', 'slot-picker');
+      picker.append(createElement('span', '', 'Index'));
+      for (let idx = 0; idx < 3; idx += 1) {
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = name;
+        input.value = String(idx);
+        input.checked = String(idx) === String(selectedValue || '0');
+        label.append(input, document.createTextNode(String(idx)));
+        picker.append(label);
+      }
+      return picker;
+    }
+
+    function renderNetworks(networks) {
+      collectScanDrafts();
+      scanRows.textContent = '';
+
+      if (!networks.length) {
+        const row = createElement('tr', 'empty-row');
+        const cell = createElement('td', '', 'No networks found');
+        cell.colSpan = 4;
+        row.append(cell);
+        scanRows.append(row);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      networks.forEach((network, index) => {
+        const key = networkKey(network);
+        const draft = scanDrafts[key] || { pass: '', idx: '0' };
+        const row = document.createElement('tr');
+
+        row.append(createElement('td', '', network.ssid || 'hidden'));
+        row.append(createElement('td', `signal ${signalClass(Number(network.rssi))}`, formatSignal(network.rssi)));
+        row.append(createElement('td', '', network.encryption || '-'));
+
+        const actionCell = document.createElement('td');
+        const form = document.createElement('form');
+        form.className = 'network-form';
+        form.action = '/save';
+        form.method = 'POST';
+        form.dataset.networkKey = key;
+
+        const ssid = document.createElement('input');
+        ssid.type = 'hidden';
+        ssid.name = 'ssid';
+        ssid.value = network.ssid || '';
+
+        const pass = document.createElement('input');
+        pass.type = 'password';
+        pass.name = 'pass';
+        pass.maxLength = 64;
+        pass.autocomplete = 'current-password';
+        pass.placeholder = network.encryption === 'Open' ? 'optional' : 'password';
+        pass.required = network.encryption !== 'Open';
+        pass.value = draft.pass;
+
+        const button = document.createElement('button');
+        button.type = 'submit';
+        button.textContent = 'Save';
+
+        form.append(ssid, pass, button, createSlotPicker(`idx_scan_${index}`, draft.idx));
+        actionCell.append(form);
+        row.append(actionCell);
+        fragment.append(row);
+      });
+      scanRows.append(fragment);
+    }
+
+    async function fetchJson(url, fallback) {
+      if (location.protocol === 'file:') return fallback;
+      const response = await fetch(url, { cache: 'no-store' });
+      const body = await response.json();
+      if (!response.ok && response.status !== 202) throw new Error(`HTTP ${response.status}`);
+      return body;
+    }
+
+    async function loadSetup() {
+      try {
+        const data = await fetchJson('/api/setup', previewSetup);
+        Object.assign(setup, data);
+        setText('apSsid', data.ap && data.ap.ssid);
+        setText('apPassword', data.ap && data.ap.password);
+        setText('apSecurity', data.ap && data.ap.security);
+        setText('apMac', data.ap && data.ap.mac);
+        setText('apIp', data.ap && data.ap.ip);
+        setText('apChannel', data.ap && String(data.ap.channel));
+        setText('fallbackSsid', data.fallback && data.fallback.ssid);
+        setText('fallbackPassword', data.fallback && data.fallback.password);
+        renderCredentials();
+      } catch (error) {
+        scanState.textContent = 'Setup data unavailable';
+      }
+    }
+
+    async function refreshScan() {
+      refreshScanButton.disabled = true;
+      scanState.textContent = 'Scanning';
+      try {
+        const data = await fetchJson('/api/scan', previewScan);
+        if (data.scanning) {
+          scanState.textContent = 'Scan running';
+          setTimeout(refreshScan, 1600);
+          return;
+        }
+
+        lastNetworks = Array.isArray(data.networks) ? data.networks : [];
+        renderCredentials();
+        renderNetworks(lastNetworks);
+        scanState.textContent = lastNetworks.length ? `Updated ${new Date().toLocaleTimeString()}` : 'No networks found';
+      } catch (error) {
+        scanState.textContent = 'Scan unavailable';
+      } finally {
+        refreshScanButton.disabled = false;
+      }
+    }
+
+    document.addEventListener('submit', event => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || form.action.indexOf('/save') < 0) return;
+      const ssid = form.querySelector('input[name="ssid"]');
+      const pass = form.querySelector('input[name="pass"]');
+      if (!ssid || !ssid.value.trim()) {
+        event.preventDefault();
+        ssid && ssid.focus();
+        return;
+      }
+      if (pass && pass.value.length > 64) {
+        event.preventDefault();
+        pass.focus();
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]');
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Saving';
+      }
+    });
+
+    refreshScanButton.addEventListener('click', refreshScan);
+
+    async function init() {
+      await loadSetup();
+      await refreshScan();
+      setInterval(refreshScan, 12000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
+)WMSETUP";
+
+static const char kSavedPage[] = R"WMSAVED(<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="1; url=/">
+  <title>WiFiManager Setup Saved</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111827; color: #f9fafb; }
+    main { width: min(520px, calc(100vw - 32px)); }
+    section { background: #172033; border: 1px solid #2c374c; border-radius: 8px; padding: 18px; }
+    h2 { margin: 0 0 10px; font-size: 22px; font-weight: 700; letter-spacing: 0; }
+    p { margin: 0; color: #d1d5db; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h2>Saved!</h2>
+      <p>WiFi credentials saved. Connecting...</p>
+    </section>
+  </main>
+  <script>
+    setTimeout(() => location.replace('/'), 650);
+  </script>
+</body>
+</html>
+)WMSAVED";
+} // namespace WiFiManagerWebAssets
+
+#endif // WIFI_MANAGER_WEB_ASSETS_H

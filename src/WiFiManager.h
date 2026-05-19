@@ -261,9 +261,15 @@ private:
     
     // GET /status
     static void handleAPModeStatus();
+
+    // GET /api/setup
+    static void handleAPModeSetupApi();
     
     // GET /scan
     static void handleAPModeScan();
+
+    // GET /api/scan
+    static void handleAPModeScanApi();
     
     // POST /save
     static void handleAPModeSave();
