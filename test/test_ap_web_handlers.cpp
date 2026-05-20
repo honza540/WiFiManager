@@ -28,7 +28,9 @@ void test_ap_mode_registers_expected_web_routes() {
     TEST_ASSERT_TRUE(server->routeRegistered("/api/setup", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/api/scan", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/save", HTTP_POST));
+    TEST_ASSERT_TRUE(server->routeRegistered("/clear", HTTP_POST));
     TEST_ASSERT_FALSE(server->routeRegistered("/save", HTTP_GET));
+    TEST_ASSERT_FALSE(server->routeRegistered("/clear", HTTP_GET));
 
     WiFiManager::stopAPMode();
 }
@@ -73,6 +75,9 @@ void test_ap_setup_api_reports_ap_fallback_and_credentials() {
     TEST_ASSERT_EQUAL_STRING("application/json", server->getLastContentType().c_str());
     assert_contains(server->getLastBody(), "\"state\":\"AP_MODE\"");
     assert_contains(server->getLastBody(), "\"fallback\"");
+    assert_contains(server->getLastBody(), "\"bt\"");
+    assert_contains(server->getLastBody(), BT_DEVICE_NAME);
+    assert_contains(server->getLastBody(), BT_PASSWORD);
     assert_contains(server->getLastBody(), WIFI_FALLBACK_SSID);
     assert_contains(server->getLastBody(), "\"idx\":1");
     assert_contains(server->getLastBody(), "StoredOne");
@@ -123,6 +128,21 @@ void test_ap_save_route_stores_credentials_and_returns_saved_page() {
     TEST_ASSERT_TRUE(credential.valid);
     TEST_ASSERT_EQUAL_STRING("SetupSSID", credential.ssid.c_str());
     TEST_ASSERT_EQUAL_STRING("SetupPass", credential.password.c_str());
+
+    WiFiManager::stopAPMode();
+}
+
+void test_ap_clear_route_clears_selected_credential() {
+    WebServer *server = start_ap_server_for_test();
+    TEST_ASSERT_TRUE(WiFiStorageManager::saveCredential(0, "SetupSSID", "SetupPass"));
+    server->setArg("idx", "0");
+
+    TEST_ASSERT_TRUE(server->simulateRequest("/clear", HTTP_POST));
+
+    TEST_ASSERT_EQUAL_INT(200, server->getLastStatusCode());
+    TEST_ASSERT_EQUAL_STRING("text/plain", server->getLastContentType().c_str());
+    TEST_ASSERT_EQUAL_STRING("Credential cleared", server->getLastBody().c_str());
+    TEST_ASSERT_FALSE(WiFiStorageManager::loadCredential(0).valid);
 
     WiFiManager::stopAPMode();
 }

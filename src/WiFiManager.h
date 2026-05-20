@@ -273,6 +273,9 @@ private:
     
     // POST /save
     static void handleAPModeSave();
+
+    // POST /clear
+    static void handleAPModeClear();
     
     // Změní stav na nový a zaloguje ho
     static void setState(WiFiManagerState newState);

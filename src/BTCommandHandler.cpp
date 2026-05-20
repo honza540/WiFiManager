@@ -11,8 +11,10 @@
 BluetoothSerial* BTCommandHandler::serialBT = nullptr;
 bool BTCommandHandler::initialized = false;
 bool BTCommandHandler::btConnected = false;
+bool BTCommandHandler::autoStopHold = false;
 String BTCommandHandler::commandBuffer = "";
 unsigned long BTCommandHandler::lastHeartbeat = 0;
+unsigned long BTCommandHandler::noClientTimeoutMs = BT_NO_CLIENT_TIMEOUT_MS;
 const char* BTCommandHandler::TAG = "BT";
 std::vector<ICommandHandler*> BTCommandHandler::commandHandlers;
 ICommandHandler* BTCommandHandler::wifiCommandHandler = nullptr;
@@ -65,25 +67,34 @@ void BTCommandHandler::begin() {
                           BT_CONSOLE_AUTH_MAX_ATTEMPTS);
     updateBTOutputGate();
     initialized = true;
+    btConnected = false;
+    commandBuffer = "";
 
     LOG_INFO(TAG, "Bluetooth started. Pin: " BT_PASSWORD);
     sendResponse("WiFiManager BT Interface Ready");
 
     // Register WiFi command handler
-    wifiCommandHandler = new WiFiManagerCommands();
-    registerCommandHandler(wifiCommandHandler);
+    if (wifiCommandHandler == nullptr) {
+        wifiCommandHandler = new WiFiManagerCommands();
+        registerCommandHandler(wifiCommandHandler);
+    }
 
     printHelp();
 }
 
 void BTCommandHandler::update() {
-    if (serialBT == nullptr) {
+    if (!initialized || serialBT == nullptr) {
         return;
     }
 
     handleConnectionState();
     if (btConnected) {
         handleAuthTimeout();
+    }
+    handleAutoStop();
+
+    if (!initialized || serialBT == nullptr) {
+        return;
     }
 
     // Read incoming data
@@ -109,11 +120,28 @@ void BTCommandHandler::update() {
 }
 
 bool BTCommandHandler::isConnected() {
-    return serialBT != nullptr && serialBT->connected();
+    return initialized && serialBT != nullptr && serialBT->connected();
+}
+
+bool BTCommandHandler::isRunning() {
+    return initialized && serialBT != nullptr;
+}
+
+void BTCommandHandler::setAutoStopHold(bool hold) {
+    autoStopHold = hold;
+
+    if (autoStopHold) {
+        if (!initialized) {
+            begin();
+        }
+        return;
+    }
+
+    handleAutoStop();
 }
 
 BluetoothSerial* BTCommandHandler::getSerialStream() {
-    if (serialBT == nullptr || !consoleAuth.allowsConsole()) {
+    if (!initialized || serialBT == nullptr || !consoleAuth.allowsConsole()) {
         return nullptr;
     }
 
@@ -256,6 +284,37 @@ void BTCommandHandler::handleConnectionState() {
     updateBTOutputGate();
 }
 
+void BTCommandHandler::handleAutoStop() {
+    if (!initialized || serialBT == nullptr || autoStopHold || noClientTimeoutMs == 0) {
+        return;
+    }
+
+    if (btConnected || serialBT->connected()) {
+        return;
+    }
+
+    if (millis() < noClientTimeoutMs) {
+        return;
+    }
+
+    stopBluetooth("No BT client connected before timeout; stopping Bluetooth");
+}
+
+void BTCommandHandler::stopBluetooth(const String& reason) {
+    if (!initialized || serialBT == nullptr) {
+        return;
+    }
+
+    LOG_WARN(TAG, reason);
+    serialBT->end();
+    Logger::setBTStream(nullptr);
+    initialized = false;
+    btConnected = false;
+    commandBuffer = "";
+    lastHeartbeat = 0;
+    consoleAuth.reset();
+}
+
 void BTCommandHandler::handleAuthInput(const String& input) {
     BTConsoleAuth::Result result = consoleAuth.submitPassword(input, millis());
     updateBTOutputGate();
@@ -330,8 +389,10 @@ void BTCommandHandler::resetForTest() {
 
     initialized = false;
     btConnected = false;
+    autoStopHold = false;
     commandBuffer = "";
     lastHeartbeat = 0;
+    noClientTimeoutMs = BT_NO_CLIENT_TIMEOUT_MS;
     consoleAuth.configure(BT_CONSOLE_AUTH_ENABLED != 0,
                           BT_CONSOLE_AUTH_PASSWORD_VALUE,
                           BT_CONSOLE_AUTH_TIMEOUT_MS,
@@ -344,6 +405,10 @@ void BTCommandHandler::configureAuthForTest(bool enabled, const String& password
                                             unsigned long timeoutMs, int maxAttempts) {
     consoleAuth.configure(enabled, password, timeoutMs, maxAttempts);
     updateBTOutputGate();
+}
+
+void BTCommandHandler::configureAutoStopForTest(unsigned long timeoutMs) {
+    noClientTimeoutMs = timeoutMs;
 }
 #endif
 

@@ -80,6 +80,11 @@
 #define BT_PASSWORD "0000"
 #endif
 
+#ifndef BT_NO_CLIENT_TIMEOUT_MS
+// Set to 0 to keep BT advertising indefinitely outside AP mode.
+#define BT_NO_CLIENT_TIMEOUT_MS (3UL * 60UL * 1000UL)
+#endif
+
 #ifndef BT_CONSOLE_AUTH_ENABLED
 #define BT_CONSOLE_AUTH_ENABLED 0
 #endif

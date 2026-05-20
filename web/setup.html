@@ -24,7 +24,7 @@
     th { color: #9ca3af; font-size: 12px; font-weight: 700; text-transform: uppercase; }
     td { color: #f9fafb; }
     .table-wrap { overflow-x: auto; border: 1px solid #2c374c; border-radius: 8px; }
-    .table-wrap table { min-width: 560px; }
+    .table-wrap table { min-width: 640px; }
     .index-cell { width: 62px; color: #93c5fd; font-variant-numeric: tabular-nums; }
     .muted { color: #9ca3af; }
     .signal { color: #d1d5db; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -55,6 +55,7 @@
     .network-form { display: grid; grid-template-columns: minmax(135px, 1fr) auto; gap: 8px; align-items: center; }
     .network-form .slot-picker { grid-column: 1 / -1; }
     .network-form button { justify-self: end; }
+    .clean-form { display: flex; justify-content: flex-end; margin: 0; }
     .empty-row td { color: #9ca3af; text-align: center; }
     @media (max-width: 640px) {
       main { width: min(100vw - 18px, 880px); padding-top: 10px; }
@@ -99,10 +100,10 @@
         <div class="table-wrap">
           <table aria-label="Saved WiFi credentials">
             <thead>
-              <tr><th>Index</th><th>Saved SSID</th><th>Signal now</th></tr>
+              <tr><th>Index</th><th>Saved SSID</th><th>Signal now</th><th>Action</th></tr>
             </thead>
             <tbody id="credentialRows">
-              <tr class="empty-row"><td colspan="3">Loading saved slots</td></tr>
+              <tr class="empty-row"><td colspan="4">Loading saved slots</td></tr>
             </tbody>
           </table>
         </div>
@@ -148,6 +149,14 @@
           </table>
         </div>
       </div>
+
+      <div class="block">
+        <h2>Bluetooth pairing</h2>
+        <dl>
+          <dt>BT device</dt><dd id="btDevice">-</dd>
+          <dt>Pairing password</dt><dd id="btPassword">-</dd>
+        </dl>
+      </div>
     </section>
   </main>
 
@@ -171,6 +180,7 @@
         channel: 1
       },
       fallback: { ssid: 'BeSmarter', password: '123456789' },
+      bt: { device_name: 'BT-BeSmarter', password: '0000' },
       credentials: [
         { idx: 0, valid: true, ssid: 'HomeWiFi' },
         { idx: 1, valid: false, ssid: '' },
@@ -230,6 +240,27 @@
         const signal = credential.valid ? findSignalForSsid(credential.ssid) : null;
         const signalCell = createElement('td', `signal ${signal === null ? '' : signalClass(signal)}`, credential.valid ? formatSignal(signal) : '-');
         row.append(signalCell);
+
+        const actionCell = document.createElement('td');
+        const form = document.createElement('form');
+        form.className = 'clean-form';
+        form.action = '/clear';
+        form.method = 'POST';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'idx';
+        input.value = String(idx);
+
+        const button = document.createElement('button');
+        button.type = 'submit';
+        button.className = 'secondary';
+        button.textContent = 'Clean';
+        button.disabled = !credential.valid;
+
+        form.append(input, button);
+        actionCell.append(form);
+        row.append(actionCell);
         fragment.append(row);
       }
       credentialRows.append(fragment);
@@ -343,6 +374,8 @@
         setText('apChannel', data.ap && String(data.ap.channel));
         setText('fallbackSsid', data.fallback && data.fallback.ssid);
         setText('fallbackPassword', data.fallback && data.fallback.password);
+        setText('btDevice', data.bt && data.bt.device_name);
+        setText('btPassword', data.bt && data.bt.password);
         renderCredentials();
       } catch (error) {
         scanState.textContent = 'Setup data unavailable';
@@ -371,9 +404,51 @@
       }
     }
 
-    document.addEventListener('submit', event => {
+    async function cleanCredential(form) {
+      const idxInput = form.querySelector('input[name="idx"]');
+      const idx = idxInput ? idxInput.value : '';
+
+      if (location.protocol === 'file:') {
+        setup.credentials = setup.credentials.map(item =>
+          String(item.idx) === String(idx) ? { idx: Number(idx), valid: false, ssid: '' } : item
+        );
+        renderCredentials();
+        return;
+      }
+
+      const response = await fetch('/clear', {
+        method: 'POST',
+        body: new URLSearchParams(new FormData(form))
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await loadSetup();
+    }
+
+    document.addEventListener('submit', async event => {
       const form = event.target;
-      if (!(form instanceof HTMLFormElement) || form.action.indexOf('/save') < 0) return;
+      if (!(form instanceof HTMLFormElement)) return;
+
+      if (form.action.indexOf('/clear') >= 0) {
+        event.preventDefault();
+        const button = form.querySelector('button[type="submit"]');
+        if (button) {
+          button.disabled = true;
+          button.textContent = 'Cleaning';
+        }
+        try {
+          await cleanCredential(form);
+        } catch (error) {
+          scanState.textContent = 'Clean unavailable';
+          if (button) {
+            button.disabled = false;
+            button.textContent = 'Clean';
+          }
+        }
+        return;
+      }
+
+      if (form.action.indexOf('/save') < 0) return;
       const ssid = form.querySelector('input[name="ssid"]');
       const pass = form.querySelector('input[name="pass"]');
       if (!ssid || !ssid.value.trim()) {

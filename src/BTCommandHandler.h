@@ -32,6 +32,12 @@ public:
     // Check if BT is connected
     static bool isConnected();
 
+    // Check if the Bluetooth service is currently running
+    static bool isRunning();
+
+    // Keep BT available while another module needs it, such as AP setup mode.
+    static void setAutoStopHold(bool hold);
+
     // Get BT serial stream for external use (nullptr until console auth passes)
     static BluetoothSerial* getSerialStream();
 
@@ -49,14 +55,17 @@ public:
     static void configureAuthForTest(bool enabled, const String& password,
                                      unsigned long timeoutMs = BT_CONSOLE_AUTH_TIMEOUT_MS,
                                      int maxAttempts = BT_CONSOLE_AUTH_MAX_ATTEMPTS);
+    static void configureAutoStopForTest(unsigned long timeoutMs);
 #endif
 
 private:
     static BluetoothSerial* serialBT;
     static bool initialized;
     static bool btConnected;
+    static bool autoStopHold;
     static String commandBuffer;
     static unsigned long lastHeartbeat;
+    static unsigned long noClientTimeoutMs;
     static const char* TAG;
     static std::vector<ICommandHandler*> commandHandlers;
     static ICommandHandler* wifiCommandHandler;
@@ -73,6 +82,8 @@ private:
     // Helper methods
     static void printHelp();
     static void handleConnectionState();
+    static void handleAutoStop();
+    static void stopBluetooth(const String& reason);
     static void handleAuthInput(const String& input);
     static void handleAuthTimeout();
     static void sendAuthPrompt();

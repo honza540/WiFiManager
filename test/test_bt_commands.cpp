@@ -49,6 +49,7 @@ extern void test_ap_setup_api_reports_ap_fallback_and_credentials();
 extern void test_ap_scan_api_returns_json();
 extern void test_ap_save_route_rejects_missing_password();
 extern void test_ap_save_route_stores_credentials_and_returns_saved_page();
+extern void test_ap_clear_route_clears_selected_credential();
 extern void test_reconnect_starts_from_requested_stored_index();
 extern void test_reconnect_clamps_invalid_requested_index_to_zero();
 extern void test_reconnect_uses_fixed_fallback_when_no_credentials_exist();
@@ -381,6 +382,62 @@ void test_bt_console_auth_timeout_locks_session() {
     TEST_ASSERT_TRUE(auth.isLocked());
     TEST_ASSERT_FALSE(auth.allowsConsole());
 }
+
+void test_bt_auto_stops_after_no_client_timeout() {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::begin();
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+
+    delay(2);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
+    TEST_ASSERT_FALSE(BTCommandHandler::isConnected());
+}
+
+void test_bt_auto_stop_waits_while_client_connected() {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::begin();
+    BluetoothSerial* bt = BTCommandHandler::getSerialStream();
+    TEST_ASSERT_NOT_NULL(bt);
+    bt->setConnected(true);
+
+    delay(2);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+    TEST_ASSERT_TRUE(BTCommandHandler::isConnected());
+
+    bt->setConnected(false);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
+}
+
+void test_bt_auto_stop_hold_keeps_service_available() {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::begin();
+
+    delay(2);
+    BTCommandHandler::setAutoStopHold(true);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+
+    BTCommandHandler::setAutoStopHold(false);
+
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
+
+    BTCommandHandler::setAutoStopHold(true);
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+    BTCommandHandler::setAutoStopHold(false);
+    BTCommandHandler::resetForTest();
+}
 #endif
 
 void runAllTests() {
@@ -402,6 +459,9 @@ void runAllTests() {
     RUN_TEST(test_bt_auth_locks_after_max_attempts);
     RUN_TEST(test_bt_auth_suppresses_bt_logs_until_authenticated);
     RUN_TEST(test_bt_console_auth_timeout_locks_session);
+    RUN_TEST(test_bt_auto_stops_after_no_client_timeout);
+    RUN_TEST(test_bt_auto_stop_waits_while_client_connected);
+    RUN_TEST(test_bt_auto_stop_hold_keeps_service_available);
 #endif
 
     // Delegate to other test groups if available
@@ -447,6 +507,7 @@ void runAllTests() {
     RUN_TEST(test_ap_scan_api_returns_json);
     RUN_TEST(test_ap_save_route_rejects_missing_password);
     RUN_TEST(test_ap_save_route_stores_credentials_and_returns_saved_page);
+    RUN_TEST(test_ap_clear_route_clears_selected_credential);
     RUN_TEST(test_reconnect_starts_from_requested_stored_index);
     RUN_TEST(test_reconnect_clamps_invalid_requested_index_to_zero);
     RUN_TEST(test_reconnect_uses_fixed_fallback_when_no_credentials_exist);

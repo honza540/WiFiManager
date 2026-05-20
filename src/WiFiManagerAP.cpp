@@ -1,4 +1,5 @@
 #include "WiFiManager.h"
+#include "BTCommandHandler.h"
 #include "WiFiManagerWebTemplates.h"
 
 namespace {
@@ -65,6 +66,11 @@ String setupJson() {
     json += jsonString(String(WIFI_FALLBACK_SSID));
     json += ",\"password\":";
     json += jsonString(String(WIFI_FALLBACK_PASSWORD));
+    json += "},\"bt\":{";
+    json += "\"device_name\":";
+    json += jsonString(String(BT_DEVICE_NAME));
+    json += ",\"password\":";
+    json += jsonString(String(BT_PASSWORD));
     json += "},\"credentials\":[";
 
     for (uint8_t i = 0; i < WIFI_MAX_CREDENTIALS; i++) {
@@ -156,6 +162,8 @@ void WiFiManager::startAPMode() {
     }
 
     // Logování informací
+    BTCommandHandler::setAutoStopHold(true);
+
     LOG_INFO(TAG, "AP Mode started");
     LOG_INFO(TAG, "SSID: " + apSSID);
     LOG_INFO(TAG, "AP MAC: " + WiFi.softAPmacAddress());
@@ -177,6 +185,7 @@ void WiFiManager::startAPMode() {
     apModeServer->on("/api/setup", HTTP_GET, []() { handleAPModeSetupApi(); });
     apModeServer->on("/api/scan", HTTP_GET, []() { handleAPModeScanApi(); });
     apModeServer->on("/save", HTTP_POST, []() { handleAPModeSave(); });
+    apModeServer->on("/clear", HTTP_POST, []() { handleAPModeClear(); });
 
     // Spustit WebServer
     apModeServer->begin();
@@ -192,6 +201,7 @@ void WiFiManager::stopAPMode() {
     }
     WiFi.softAPdisconnect(true);
     setState(WM_DISCONNECTED);
+    BTCommandHandler::setAutoStopHold(false);
     LOG_INFO(TAG, "AP Mode stopped");
 }
 /**
@@ -298,4 +308,20 @@ void WiFiManager::handleAPModeSave() {
         // Chyba
         apModeServer->send(400, "text/plain", "Failed to save credentials");
     }
+}
+
+void WiFiManager::handleAPModeClear() {
+    if (!apModeServer->hasArg("idx")) {
+        apModeServer->send(400, "text/plain", "Missing credential index");
+        return;
+    }
+
+    int idxValue = apModeServer->arg("idx").toInt();
+    if (idxValue < 0 || idxValue >= WIFI_MAX_CREDENTIALS) {
+        apModeServer->send(400, "text/plain", "Invalid credential index");
+        return;
+    }
+
+    WiFiStorageManager::clearCredential(static_cast<uint8_t>(idxValue));
+    apModeServer->send(200, "text/plain", "Credential cleared");
 }

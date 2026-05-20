@@ -14,7 +14,7 @@
 
 class BluetoothSerial : public Stream {
 public:
-    BluetoothSerial() : connectedFlag(false), rxPos(0) {}
+    BluetoothSerial() : connectedFlag(false), runningFlag(false), rxPos(0) {}
     void enableSSP() {}
     void onConfirmRequest(std::function<void(uint32_t)> callback) {
         confirmCallback = callback;
@@ -27,13 +27,18 @@ public:
     }
     bool begin(const char*, bool) {
         connectedFlag = false;
+        runningFlag = true;
         return true;
+    }
+    void end() {
+        connectedFlag = false;
+        runningFlag = false;
     }
     bool setPin(const char*) {
         return true;
     }
     bool connected() const {
-        return connectedFlag;
+        return runningFlag && connectedFlag;
     }
     size_t available() const {
         return rxBuffer.size() - rxPos;
@@ -78,6 +83,7 @@ public:
 
 private:
     bool connectedFlag;
+    bool runningFlag;
     bool confirmAccepted = false;
     std::function<void(uint32_t)> confirmCallback;
     std::function<void(boolean)> authCallback;

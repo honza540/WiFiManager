@@ -16,6 +16,10 @@ void test_setup_page_contains_wifi_form_contract() {
     assert_contains(html, "type=\"radio\" name=\"idx\" value=\"0\"");
     assert_contains(html, "id=\"credentialRows\"");
     assert_contains(html, "id=\"scanRows\"");
+    assert_contains(html, "id=\"btDevice\"");
+    assert_contains(html, "id=\"btPassword\"");
+    assert_contains(html, "form.action = '/clear'");
+    assert_contains(html, "Clean");
     assert_contains(html, "/api/setup");
     assert_contains(html, "/api/scan");
     assert_contains(html, "AP mode active");
