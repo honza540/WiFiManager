@@ -401,14 +401,6 @@ void BTCommandHandler::resetForTest() {
     Logger::setBTOutputAllowed(true);
 }
 
-BluetoothSerial* BTCommandHandler::getRawSerialStreamForTest() {
-    if (!initialized) {
-        return nullptr;
-    }
-
-    return serialBT;
-}
-
 void BTCommandHandler::configureAuthForTest(bool enabled, const String& password,
                                             unsigned long timeoutMs, int maxAttempts) {
     consoleAuth.configure(enabled, password, timeoutMs, maxAttempts);

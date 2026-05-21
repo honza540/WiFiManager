@@ -86,11 +86,7 @@
 #endif
 
 #ifndef BT_CONSOLE_AUTH_ENABLED
-#define BT_CONSOLE_AUTH_ENABLED 1
-#endif
-
-#ifndef BT_CONSOLE_PASSWORD
-#define BT_CONSOLE_PASSWORD "vb"
+#define BT_CONSOLE_AUTH_ENABLED 0
 #endif
 
 #ifndef BT_CONSOLE_AUTH_TIMEOUT_MS

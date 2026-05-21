@@ -285,7 +285,7 @@ static BluetoothSerial* start_auth_console_for_test(const String& password,
                                                     int maxAttempts = 3) {
     BTCommandHandler::resetForTest();
     BTCommandHandler::begin();
-    BluetoothSerial* bt = BTCommandHandler::getRawSerialStreamForTest();
+    BluetoothSerial* bt = BTCommandHandler::getSerialStream();
     TEST_ASSERT_NOT_NULL(bt);
 
     BTCommandHandler::configureAuthForTest(true, password, timeoutMs, maxAttempts);
@@ -401,7 +401,7 @@ void test_bt_auto_stop_waits_while_client_connected() {
     BTCommandHandler::resetForTest();
     BTCommandHandler::configureAutoStopForTest(1);
     BTCommandHandler::begin();
-    BluetoothSerial* bt = BTCommandHandler::getRawSerialStreamForTest();
+    BluetoothSerial* bt = BTCommandHandler::getSerialStream();
     TEST_ASSERT_NOT_NULL(bt);
     bt->setConnected(true);
 
