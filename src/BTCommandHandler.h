@@ -52,6 +52,7 @@ public:
 
 #ifndef ARDUINO_ARCH_ESP32
     static void resetForTest();
+    static BluetoothSerial* getRawSerialStreamForTest();
     static void configureAuthForTest(bool enabled, const String& password,
                                      unsigned long timeoutMs = BT_CONSOLE_AUTH_TIMEOUT_MS,
                                      int maxAttempts = BT_CONSOLE_AUTH_MAX_ATTEMPTS);

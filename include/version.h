@@ -15,8 +15,11 @@
 // Changelog:
 // v1.4.2 (2026-05-21)
 //   - Added optional Bluetooth console authentication before command handling
+//   - Enabled BT console authentication by default with "vb" as the default password
 //   - Extracted AP setup and saved pages into generated reusable web assets
 //   - Added AP credential clearing flow and optional BT auto-stop after WiFi setup
+//   - Added native test access to the raw BT stream while keeping production auth gated
+//   - Set PlatformIO monitor speed to 115200
 //
 // v1.4.1 (2026-05-18)
 //   - Split WiFiManager implementation by responsibility for easier maintenance
