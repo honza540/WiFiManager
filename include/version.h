@@ -5,14 +5,19 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
-// 1.4.1 - Source layout refactor and host Arduino shim split
+// 1.4.2 - BT auth, AP web assets, and credential clearing
 
 #define WIFIMANAGER_VERSION_MAJOR 1
 #define WIFIMANAGER_VERSION_MINOR 4
-#define WIFIMANAGER_VERSION_PATCH 1
-#define WIFIMANAGER_VERSION_STRING "1.4.1"
+#define WIFIMANAGER_VERSION_PATCH 2
+#define WIFIMANAGER_VERSION_STRING "1.4.2"
 
 // Changelog:
+// v1.4.2 (2026-05-21)
+//   - Added optional Bluetooth console authentication before command handling
+//   - Extracted AP setup and saved pages into generated reusable web assets
+//   - Added AP credential clearing flow and optional BT auto-stop after WiFi setup
+//
 // v1.4.1 (2026-05-18)
 //   - Split WiFiManager implementation by responsibility for easier maintenance
 //   - Split WiFiManagerCommands into routing, WiFi config, and monitoring files
