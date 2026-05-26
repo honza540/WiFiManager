@@ -115,10 +115,13 @@ WiFiCredential WiFiStorageManager::loadCredential(uint8_t index) {
     String ssidKey = "wifi_ssid_" + String(index);
     String passKey = "wifi_pass_" + String(index);
 
-    // Načtení SSID a hesla z NVS
-    // getString("key", "defaultValue") vrací defaultValue pokud klíč neexistuje
+    // Check key existence first because ESP32 Preferences::getString() logs
+    // an error when a key is missing, which is noisy for intentionally empty slots.
+    if (!nvs.isKey(ssidKey.c_str())) {
+        return cred;
+    }
     String ssid = nvs.getString(ssidKey.c_str(), "");
-    String pass = nvs.getString(passKey.c_str(), "");
+    String pass = nvs.isKey(passKey.c_str()) ? nvs.getString(passKey.c_str(), "") : "";
 
     // Pokud jsme něco načetli, označit jako validní
     if (ssid.length() > 0) {

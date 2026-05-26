@@ -147,6 +147,13 @@ public:
     static String getIP();
 
     /**
+     * Index of the currently connected stored WiFi credential.
+     * Returns WIFI_MAX_CREDENTIALS for the fixed fallback or when no stored
+     * credential is currently connected.
+     */
+    static uint8_t getCurrentNetworkIndex();
+
+    /**
      * Skenování dostupných WiFi sítí
      * @param async - true = asynchronní (pozadí), false = blokující (čekej na výsledek)
      */

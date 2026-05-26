@@ -214,6 +214,12 @@ String WiFiManager::getIP() {
     }
     return "N/A";
 }
+uint8_t WiFiManager::getCurrentNetworkIndex() {
+    if (state != WM_CONNECTED || WiFi.status() != WL_CONNECTED) {
+        return WIFI_MAX_CREDENTIALS;
+    }
+    return currentNetworkIndex;
+}
 /**
  * Přidat novou WiFi síť do NVS paměti
  * Automaticky se pak zkusí při příštím startu

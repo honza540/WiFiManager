@@ -21,6 +21,12 @@ public:
     void end() {
         started = false;
     }
+    bool isKey(const char* key) const {
+        if (!started || key == nullptr) {
+            return false;
+        }
+        return storage.find(key) != storage.end();
+    }
     String getString(const char* key, const String& defaultValue) {
         if (!started) {
             return defaultValue;

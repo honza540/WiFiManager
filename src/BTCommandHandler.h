@@ -38,6 +38,11 @@ public:
     // Keep BT available while another module needs it, such as AP setup mode.
     static void setAutoStopHold(bool hold);
 
+    // Force BT service on/off until the next device restart.
+    static bool setUserOverride(bool enabled);
+    static bool isUserOverrideActive();
+    static bool isUserOverrideEnabled();
+
     // Get BT serial stream for external use (nullptr until console auth passes)
     static BluetoothSerial* getSerialStream();
 
@@ -63,6 +68,8 @@ private:
     static bool initialized;
     static bool btConnected;
     static bool autoStopHold;
+    static bool userOverrideActive;
+    static bool userOverrideEnabled;
     static String commandBuffer;
     static unsigned long lastHeartbeat;
     static unsigned long noClientTimeoutMs;

@@ -1,4 +1,5 @@
 #include <unity.h>
+#include "ArduinoHostPreferences.h"
 #include "WiFiStorageManager.h"
 
 static void reset_storage_manager() {
@@ -63,4 +64,21 @@ void test_storage_manager_load_all_preserves_index_holes() {
     TEST_ASSERT_EQUAL_STRING("ThirdOnly", credentials[2].ssid.c_str());
 
     delete[] credentials;
+}
+
+void test_preferences_is_key_tracks_started_storage() {
+    Preferences prefs;
+
+    TEST_ASSERT_FALSE(prefs.isKey("wifi_ssid_0"));
+
+    TEST_ASSERT_TRUE(prefs.begin("test", false));
+    TEST_ASSERT_FALSE(prefs.isKey("wifi_ssid_0"));
+
+    prefs.putString("wifi_ssid_0", "Network");
+    TEST_ASSERT_TRUE(prefs.isKey("wifi_ssid_0"));
+    TEST_ASSERT_FALSE(prefs.isKey("wifi_pass_0"));
+    TEST_ASSERT_FALSE(prefs.isKey(nullptr));
+
+    prefs.end();
+    TEST_ASSERT_FALSE(prefs.isKey("wifi_ssid_0"));
 }

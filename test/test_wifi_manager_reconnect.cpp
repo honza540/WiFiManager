@@ -23,6 +23,10 @@ void test_reconnect_starts_from_requested_stored_index() {
     WiFiManager::update();
     TEST_ASSERT_EQUAL(WM_CONNECTED, WiFiManager::getState());
     TEST_ASSERT_EQUAL_STRING("SecondSSID", WiFiManager::getSSID().c_str());
+    TEST_ASSERT_EQUAL_UINT8(1, WiFiManager::getCurrentNetworkIndex());
+
+    WiFi.setConnected(false);
+    TEST_ASSERT_EQUAL_UINT8(WIFI_MAX_CREDENTIALS, WiFiManager::getCurrentNetworkIndex());
 }
 
 void test_reconnect_clamps_invalid_requested_index_to_zero() {
@@ -48,6 +52,7 @@ void test_reconnect_uses_fixed_fallback_when_no_credentials_exist() {
     WiFiManager::update();
     TEST_ASSERT_EQUAL(WM_CONNECTED, WiFiManager::getState());
     TEST_ASSERT_EQUAL_STRING(WIFI_FALLBACK_SSID, WiFiManager::getSSID().c_str());
+    TEST_ASSERT_EQUAL_UINT8(WIFI_MAX_CREDENTIALS, WiFiManager::getCurrentNetworkIndex());
 }
 
 void test_start_ap_mode_does_not_create_server_when_softap_fails() {

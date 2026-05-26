@@ -5,14 +5,19 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
-// 1.4.2 - BT auth, AP web assets, and credential clearing
+// 1.4.3 - Active credential API, quiet NVS reads, and BT override controls
 
 #define WIFIMANAGER_VERSION_MAJOR 1
 #define WIFIMANAGER_VERSION_MINOR 4
-#define WIFIMANAGER_VERSION_PATCH 2
-#define WIFIMANAGER_VERSION_STRING "1.4.2"
+#define WIFIMANAGER_VERSION_PATCH 3
+#define WIFIMANAGER_VERSION_STRING "1.4.3"
 
 // Changelog:
+// v1.4.3 (2026-05-26)
+//   - Added WiFiManager::getCurrentNetworkIndex() for active stored credential reporting
+//   - Avoided noisy missing-key Preferences reads for empty credential slots
+//   - Added BTCommandHandler user override APIs for runtime BT force on/off
+//
 // v1.4.2 (2026-05-21)
 //   - Added optional Bluetooth console authentication before command handling
 //   - Extracted AP setup and saved pages into generated reusable web assets

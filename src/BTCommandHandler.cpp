@@ -12,6 +12,8 @@ BluetoothSerial* BTCommandHandler::serialBT = nullptr;
 bool BTCommandHandler::initialized = false;
 bool BTCommandHandler::btConnected = false;
 bool BTCommandHandler::autoStopHold = false;
+bool BTCommandHandler::userOverrideActive = false;
+bool BTCommandHandler::userOverrideEnabled = false;
 String BTCommandHandler::commandBuffer = "";
 unsigned long BTCommandHandler::lastHeartbeat = 0;
 unsigned long BTCommandHandler::noClientTimeoutMs = BT_NO_CLIENT_TIMEOUT_MS;
@@ -22,6 +24,10 @@ BTConsoleAuth BTCommandHandler::consoleAuth;
 
 void BTCommandHandler::begin() {
     if (initialized) {
+        return;
+    }
+
+    if (userOverrideActive && !userOverrideEnabled) {
         return;
     }
 
@@ -130,6 +136,15 @@ bool BTCommandHandler::isRunning() {
 void BTCommandHandler::setAutoStopHold(bool hold) {
     autoStopHold = hold;
 
+    if (userOverrideActive) {
+        if (userOverrideEnabled) {
+            begin();
+        } else {
+            stopBluetooth("Bluetooth forced off by user override");
+        }
+        return;
+    }
+
     if (autoStopHold) {
         if (!initialized) {
             begin();
@@ -138,6 +153,27 @@ void BTCommandHandler::setAutoStopHold(bool hold) {
     }
 
     handleAutoStop();
+}
+
+bool BTCommandHandler::setUserOverride(bool enabled) {
+    userOverrideActive = true;
+    userOverrideEnabled = enabled;
+
+    if (enabled) {
+        begin();
+        return isRunning();
+    }
+
+    stopBluetooth("Bluetooth forced off by user override");
+    return !isRunning();
+}
+
+bool BTCommandHandler::isUserOverrideActive() {
+    return userOverrideActive;
+}
+
+bool BTCommandHandler::isUserOverrideEnabled() {
+    return userOverrideActive && userOverrideEnabled;
 }
 
 BluetoothSerial* BTCommandHandler::getSerialStream() {
@@ -289,6 +325,10 @@ void BTCommandHandler::handleAutoStop() {
         return;
     }
 
+    if (userOverrideActive && userOverrideEnabled) {
+        return;
+    }
+
     if (btConnected || serialBT->connected()) {
         return;
     }
@@ -390,6 +430,8 @@ void BTCommandHandler::resetForTest() {
     initialized = false;
     btConnected = false;
     autoStopHold = false;
+    userOverrideActive = false;
+    userOverrideEnabled = false;
     commandBuffer = "";
     lastHeartbeat = 0;
     noClientTimeoutMs = BT_NO_CLIENT_TIMEOUT_MS;

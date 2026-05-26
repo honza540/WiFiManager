@@ -42,6 +42,7 @@ extern void test_storage_manager_save_load_roundtrip();
 extern void test_storage_manager_rejects_invalid_inputs();
 extern void test_storage_manager_clear_credential_recomputes_count();
 extern void test_storage_manager_load_all_preserves_index_holes();
+extern void test_preferences_is_key_tracks_started_storage();
 extern void test_ap_mode_registers_expected_web_routes();
 extern void test_ap_root_route_returns_setup_page();
 extern void test_ap_status_route_reports_state_and_credential_count();
@@ -438,6 +439,39 @@ void test_bt_auto_stop_hold_keeps_service_available() {
     BTCommandHandler::setAutoStopHold(false);
     BTCommandHandler::resetForTest();
 }
+
+void test_bt_user_override_can_force_service_off_and_on() {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::begin();
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+    TEST_ASSERT_TRUE(BTCommandHandler::setUserOverride(false));
+    TEST_ASSERT_TRUE(BTCommandHandler::isUserOverrideActive());
+    TEST_ASSERT_FALSE(BTCommandHandler::isUserOverrideEnabled());
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
+
+    BTCommandHandler::begin();
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
+
+    TEST_ASSERT_TRUE(BTCommandHandler::setUserOverride(true));
+    TEST_ASSERT_TRUE(BTCommandHandler::isUserOverrideEnabled());
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+
+    BTCommandHandler::resetForTest();
+}
+
+void test_bt_user_override_on_bypasses_auto_stop() {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::configureAutoStopForTest(1);
+
+    TEST_ASSERT_TRUE(BTCommandHandler::setUserOverride(true));
+    delay(2);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+
+    BTCommandHandler::resetForTest();
+}
 #endif
 
 void runAllTests() {
@@ -462,6 +496,8 @@ void runAllTests() {
     RUN_TEST(test_bt_auto_stops_after_no_client_timeout);
     RUN_TEST(test_bt_auto_stop_waits_while_client_connected);
     RUN_TEST(test_bt_auto_stop_hold_keeps_service_available);
+    RUN_TEST(test_bt_user_override_can_force_service_off_and_on);
+    RUN_TEST(test_bt_user_override_on_bypasses_auto_stop);
 #endif
 
     // Delegate to other test groups if available
@@ -500,6 +536,7 @@ void runAllTests() {
     RUN_TEST(test_storage_manager_rejects_invalid_inputs);
     RUN_TEST(test_storage_manager_clear_credential_recomputes_count);
     RUN_TEST(test_storage_manager_load_all_preserves_index_holes);
+    RUN_TEST(test_preferences_is_key_tracks_started_storage);
     RUN_TEST(test_ap_mode_registers_expected_web_routes);
     RUN_TEST(test_ap_root_route_returns_setup_page);
     RUN_TEST(test_ap_status_route_reports_state_and_credential_count);

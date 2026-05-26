@@ -65,7 +65,7 @@ Or with a specific version:
 
 ```ini
 lib_deps =
-    https://github.com/honza540/WiFiManager.git#v1.4.0
+    https://github.com/honza540/WiFiManager.git#v1.4.3
 ```
 
 ### Manual Installation
@@ -208,6 +208,7 @@ WiFiManagerState WiFiManager::getState();       // Get current state
 String WiFiManager::getStatusString();          // Get status text
 String WiFiManager::getSSID();                  // Get connected SSID
 String WiFiManager::getIP();                    // Get IP address
+uint8_t WiFiManager::getCurrentNetworkIndex();  // Active stored credential index
 String WiFiManager::getSignalStrength();        // Get signal strength
 ```
 
@@ -229,6 +230,7 @@ void WiFiStorageManager::clearAll();                   // Clear all
 BTCommandHandler::begin();      // Initialize Bluetooth
 BTCommandHandler::update();     // Main loop call
 bool BTCommandHandler::isConnected();  // Check BT connection
+bool BTCommandHandler::setUserOverride(enabled); // Force BT on/off until restart
 ```
 
 ## Future Enhancements
