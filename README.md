@@ -65,7 +65,7 @@ Or with a specific version:
 
 ```ini
 lib_deps =
-    https://github.com/honza540/WiFiManager.git#v1.4.3
+    https://github.com/honza540/WiFiManager.git#v1.4.4
 ```
 
 ### Manual Installation
@@ -253,5 +253,5 @@ Reusable WiFiManager module (2026)
 
 ---
 
-**Version**: 1.4.0 (Stable)
+**Version**: 1.4.4 (Stable)
 **Status**: Production Ready for Testing

@@ -175,7 +175,7 @@ void WiFiManager::startAPMode() {
     if (apModeServer != nullptr) {
         delete apModeServer;  // Smazat starý server pokud existuje
     }
-    apModeServer = new WebServer(WEB_SERVER_PORT);
+    apModeServer = new WebServer(WIFI_MANAGER_AP_SERVER_PORT);
 
     // Registrace endpointů (URL cesty které webserver obsluhuje)
     apModeServer->on("/", HTTP_GET, []() { handleAPModeRoot(); });

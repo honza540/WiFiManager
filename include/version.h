@@ -5,14 +5,17 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
-// 1.4.3 - Active credential API, quiet NVS reads, and BT override controls
+// 1.4.4 - Rename AP server port config macro for clarity
 
 #define WIFIMANAGER_VERSION_MAJOR 1
 #define WIFIMANAGER_VERSION_MINOR 4
-#define WIFIMANAGER_VERSION_PATCH 3
-#define WIFIMANAGER_VERSION_STRING "1.4.3"
+#define WIFIMANAGER_VERSION_PATCH 4
+#define WIFIMANAGER_VERSION_STRING "1.4.4"
 
 // Changelog:
+// v1.4.4 (2026-06-01)
+//   - Renamed WEB_SERVER_PORT to WIFI_MANAGER_AP_SERVER_PORT for AP setup server clarity
+//
 // v1.4.3 (2026-05-26)
 //   - Added WiFiManager::getCurrentNetworkIndex() for active stored credential reporting
 //   - Avoided noisy missing-key Preferences reads for empty credential slots

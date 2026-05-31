@@ -20,7 +20,7 @@ void test_ap_mode_registers_expected_web_routes() {
     WebServer *server = start_ap_server_for_test();
 
     TEST_ASSERT_TRUE(server->isStarted());
-    TEST_ASSERT_EQUAL_INT(WEB_SERVER_PORT, server->port());
+    TEST_ASSERT_EQUAL_INT(WIFI_MANAGER_AP_SERVER_PORT, server->port());
     TEST_ASSERT_TRUE(server->routeRegistered("/", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/config", HTTP_GET));
     TEST_ASSERT_TRUE(server->routeRegistered("/status", HTTP_GET));

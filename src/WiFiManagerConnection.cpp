@@ -302,7 +302,7 @@ void WiFiManager::enterCredentialApplyAPMode(const String &reason) {
     if (state == WM_AP_MODE) {
         String apSSID = String(WIFI_AP_SSID_PREFIX) + String((uint32_t)ESP.getEfuseMac(), HEX);
         sendBTStatus("AP mode: " + apSSID + " | IP: " + WiFi.softAPIP().toString() +
-                     " | Port: " + String(WEB_SERVER_PORT));
+                     " | Port: " + String(WIFI_MANAGER_AP_SERVER_PORT));
     } else {
         sendBTStatus("AP mode failed to start");
     }

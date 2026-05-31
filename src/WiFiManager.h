@@ -100,7 +100,7 @@ public:
      * 
      * Web server běží na:
      * - IP: 192.168.4.1
-     * - Port: WEB_SERVER_PORT (80)
+     * - Port: WIFI_MANAGER_AP_SERVER_PORT (80)
      * - Úkony: Nastavení WiFi, skenování sítí, status
      */
     static void startAPMode();
