@@ -386,7 +386,7 @@ void test_bt_console_auth_timeout_locks_session() {
 
 void test_bt_auto_stops_after_no_client_timeout() {
     BTCommandHandler::resetForTest();
-    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::configureAutoStopForTest(1, 1000, 1000);
     BTCommandHandler::begin();
 
     TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
@@ -398,29 +398,50 @@ void test_bt_auto_stops_after_no_client_timeout() {
     TEST_ASSERT_FALSE(BTCommandHandler::isConnected());
 }
 
-void test_bt_auto_stop_waits_while_client_connected() {
+void test_bt_auto_stops_after_connected_client_timeout() {
     BTCommandHandler::resetForTest();
-    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::configureAutoStopForTest(1000, 1, 1000);
     BTCommandHandler::begin();
     BluetoothSerial* bt = BTCommandHandler::getSerialStream();
     TEST_ASSERT_NOT_NULL(bt);
     bt->setConnected(true);
-
-    delay(2);
     BTCommandHandler::update();
 
     TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
     TEST_ASSERT_TRUE(BTCommandHandler::isConnected());
 
+    delay(2);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
+    TEST_ASSERT_FALSE(BTCommandHandler::isConnected());
+}
+
+void test_bt_no_client_timeout_restarts_after_disconnect() {
+    BTCommandHandler::resetForTest();
+    BTCommandHandler::configureAutoStopForTest(1, 1000, 1000);
+    BTCommandHandler::begin();
+    BluetoothSerial* bt = BTCommandHandler::getSerialStream();
+    TEST_ASSERT_NOT_NULL(bt);
+    bt->setConnected(true);
+    BTCommandHandler::update();
+
+    delay(2);
     bt->setConnected(false);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+    TEST_ASSERT_FALSE(BTCommandHandler::isConnected());
+
+    delay(2);
     BTCommandHandler::update();
 
     TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
 }
 
-void test_bt_auto_stop_hold_keeps_service_available() {
+void test_bt_auto_stop_hold_uses_hold_timeout() {
     BTCommandHandler::resetForTest();
-    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::configureAutoStopForTest(1, 1000, 50);
     BTCommandHandler::begin();
 
     delay(2);
@@ -429,14 +450,10 @@ void test_bt_auto_stop_hold_keeps_service_available() {
 
     TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
 
-    BTCommandHandler::setAutoStopHold(false);
+    delay(60);
+    BTCommandHandler::update();
 
     TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
-
-    BTCommandHandler::setAutoStopHold(true);
-
-    TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
-    BTCommandHandler::setAutoStopHold(false);
     BTCommandHandler::resetForTest();
 }
 
@@ -460,15 +477,20 @@ void test_bt_user_override_can_force_service_off_and_on() {
     BTCommandHandler::resetForTest();
 }
 
-void test_bt_user_override_on_bypasses_auto_stop() {
+void test_bt_user_override_on_uses_hold_timeout() {
     BTCommandHandler::resetForTest();
-    BTCommandHandler::configureAutoStopForTest(1);
+    BTCommandHandler::configureAutoStopForTest(1, 1000, 50);
 
     TEST_ASSERT_TRUE(BTCommandHandler::setUserOverride(true));
     delay(2);
     BTCommandHandler::update();
 
     TEST_ASSERT_TRUE(BTCommandHandler::isRunning());
+
+    delay(60);
+    BTCommandHandler::update();
+
+    TEST_ASSERT_FALSE(BTCommandHandler::isRunning());
 
     BTCommandHandler::resetForTest();
 }
@@ -494,10 +516,11 @@ void runAllTests() {
     RUN_TEST(test_bt_auth_suppresses_bt_logs_until_authenticated);
     RUN_TEST(test_bt_console_auth_timeout_locks_session);
     RUN_TEST(test_bt_auto_stops_after_no_client_timeout);
-    RUN_TEST(test_bt_auto_stop_waits_while_client_connected);
-    RUN_TEST(test_bt_auto_stop_hold_keeps_service_available);
+    RUN_TEST(test_bt_auto_stops_after_connected_client_timeout);
+    RUN_TEST(test_bt_no_client_timeout_restarts_after_disconnect);
+    RUN_TEST(test_bt_auto_stop_hold_uses_hold_timeout);
     RUN_TEST(test_bt_user_override_can_force_service_off_and_on);
-    RUN_TEST(test_bt_user_override_on_bypasses_auto_stop);
+    RUN_TEST(test_bt_user_override_on_uses_hold_timeout);
 #endif
 
     // Delegate to other test groups if available

@@ -81,8 +81,18 @@
 #endif
 
 #ifndef BT_NO_CLIENT_TIMEOUT_MS
-// Set to 0 to keep BT advertising indefinitely outside AP mode.
+// Stops normal BT advertising when no client has connected for this long.
 #define BT_NO_CLIENT_TIMEOUT_MS (3UL * 60UL * 1000UL)
+#endif
+
+#ifndef BT_CONNECTED_CLIENT_TIMEOUT_MS
+// Maximum time a connected BT client can keep the service running.
+#define BT_CONNECTED_CLIENT_TIMEOUT_MS (15UL * 60UL * 1000UL)
+#endif
+
+#ifndef BT_HOLD_NO_CLIENT_TIMEOUT_MS
+// Timeout without a client while AP setup mode or user override keeps BT available.
+#define BT_HOLD_NO_CLIENT_TIMEOUT_MS (15UL * 60UL * 1000UL)
 #endif
 
 #ifndef BT_CONSOLE_AUTH_ENABLED
@@ -90,7 +100,7 @@
 #endif
 
 #ifndef BT_CONSOLE_AUTH_TIMEOUT_MS
-#define BT_CONSOLE_AUTH_TIMEOUT_MS 30000
+#define BT_CONSOLE_AUTH_TIMEOUT_MS (2UL * 60UL * 1000UL)
 #endif
 
 #ifndef BT_CONSOLE_AUTH_MAX_ATTEMPTS

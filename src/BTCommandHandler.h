@@ -36,9 +36,10 @@ public:
     static bool isRunning();
 
     // Keep BT available while another module needs it, such as AP setup mode.
+    // Auto-stop still applies via BT_HOLD_NO_CLIENT_TIMEOUT_MS.
     static void setAutoStopHold(bool hold);
 
-    // Force BT service on/off until the next device restart.
+    // Force BT service on/off until auto-stop, explicit change, or restart.
     static bool setUserOverride(bool enabled);
     static bool isUserOverrideActive();
     static bool isUserOverrideEnabled();
@@ -60,7 +61,9 @@ public:
     static void configureAuthForTest(bool enabled, const String& password,
                                      unsigned long timeoutMs = BT_CONSOLE_AUTH_TIMEOUT_MS,
                                      int maxAttempts = BT_CONSOLE_AUTH_MAX_ATTEMPTS);
-    static void configureAutoStopForTest(unsigned long timeoutMs);
+    static void configureAutoStopForTest(unsigned long noClientTimeoutMs,
+                                         unsigned long connectedClientTimeoutMs,
+                                         unsigned long holdNoClientTimeoutMs);
 #endif
 
 private:
@@ -73,6 +76,12 @@ private:
     static String commandBuffer;
     static unsigned long lastHeartbeat;
     static unsigned long noClientTimeoutMs;
+    static unsigned long connectedClientTimeoutMs;
+    static unsigned long holdNoClientTimeoutMs;
+    static unsigned long noClientSinceMs;
+    static unsigned long connectedSinceMs;
+    static bool noClientTimerActive;
+    static bool connectedTimerActive;
     static const char* TAG;
     static std::vector<ICommandHandler*> commandHandlers;
     static ICommandHandler* wifiCommandHandler;

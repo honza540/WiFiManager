@@ -5,14 +5,21 @@
 // WiFiManager Version
 // ============================================================================
 // Format: MAJOR.MINOR.PATCH
+// 1.4.5 - Bluetooth auto-stop timers are session-based and cover connected/held modes
 // 1.4.4 - Rename AP server port config macro for clarity
 
 #define WIFIMANAGER_VERSION_MAJOR 1
 #define WIFIMANAGER_VERSION_MINOR 4
-#define WIFIMANAGER_VERSION_PATCH 4
-#define WIFIMANAGER_VERSION_STRING "1.4.4"
+#define WIFIMANAGER_VERSION_PATCH 5
+#define WIFIMANAGER_VERSION_STRING "1.4.5"
 
 // Changelog:
+// v1.4.5 (2026-06-04)
+//   - Count BT no-client auto-stop from BT start and from each client disconnect
+//   - Added maximum connected-client BT lifetime
+//   - Added bounded BT lifetime for AP setup/user override hold modes
+//   - Changed default BT console auth timeout to 2 minutes
+//
 // v1.4.4 (2026-06-01)
 //   - Renamed WEB_SERVER_PORT to WIFI_MANAGER_AP_SERVER_PORT for AP setup server clarity
 //

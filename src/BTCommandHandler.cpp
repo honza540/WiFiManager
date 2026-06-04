@@ -17,6 +17,12 @@ bool BTCommandHandler::userOverrideEnabled = false;
 String BTCommandHandler::commandBuffer = "";
 unsigned long BTCommandHandler::lastHeartbeat = 0;
 unsigned long BTCommandHandler::noClientTimeoutMs = BT_NO_CLIENT_TIMEOUT_MS;
+unsigned long BTCommandHandler::connectedClientTimeoutMs = BT_CONNECTED_CLIENT_TIMEOUT_MS;
+unsigned long BTCommandHandler::holdNoClientTimeoutMs = BT_HOLD_NO_CLIENT_TIMEOUT_MS;
+unsigned long BTCommandHandler::noClientSinceMs = 0;
+unsigned long BTCommandHandler::connectedSinceMs = 0;
+bool BTCommandHandler::noClientTimerActive = false;
+bool BTCommandHandler::connectedTimerActive = false;
 const char* BTCommandHandler::TAG = "BT";
 std::vector<ICommandHandler*> BTCommandHandler::commandHandlers;
 ICommandHandler* BTCommandHandler::wifiCommandHandler = nullptr;
@@ -75,6 +81,10 @@ void BTCommandHandler::begin() {
     initialized = true;
     btConnected = false;
     commandBuffer = "";
+    noClientSinceMs = millis();
+    connectedSinceMs = 0;
+    noClientTimerActive = true;
+    connectedTimerActive = false;
 
     LOG_INFO(TAG, "Bluetooth started. Pin: " BT_PASSWORD);
     sendResponse("WiFiManager BT Interface Ready");
@@ -292,12 +302,17 @@ void BTCommandHandler::sendError(const String &message) {
 
 void BTCommandHandler::handleConnectionState() {
     bool connected = serialBT->connected();
+    unsigned long now = millis();
 
     if (connected) {
         if (!btConnected) {
             btConnected = true;
+            connectedSinceMs = now;
+            noClientSinceMs = 0;
+            connectedTimerActive = true;
+            noClientTimerActive = false;
             commandBuffer = "";
-            consoleAuth.beginSession(millis());
+            consoleAuth.beginSession(now);
             updateBTOutputGate();
             LOG_WARN(TAG, "BT serial client connected");
 
@@ -306,34 +321,56 @@ void BTCommandHandler::handleConnectionState() {
             }
         }
 
-        lastHeartbeat = millis();
+        lastHeartbeat = now;
         return;
     }
 
     if (btConnected) {
         LOG_WARN(TAG, "BT disconnected");
+        noClientSinceMs = now;
+        noClientTimerActive = true;
+    } else if (!noClientTimerActive) {
+        noClientSinceMs = now;
+        noClientTimerActive = true;
     }
 
     btConnected = false;
+    connectedSinceMs = 0;
+    connectedTimerActive = false;
     commandBuffer = "";
     consoleAuth.reset();
     updateBTOutputGate();
 }
 
 void BTCommandHandler::handleAutoStop() {
-    if (!initialized || serialBT == nullptr || autoStopHold || noClientTimeoutMs == 0) {
+    if (!initialized || serialBT == nullptr) {
         return;
     }
 
-    if (userOverrideActive && userOverrideEnabled) {
+    unsigned long now = millis();
+    bool connected = btConnected || serialBT->connected();
+
+    if (connected) {
+        if (!connectedTimerActive) {
+            connectedSinceMs = now;
+            connectedTimerActive = true;
+        }
+
+        if (connectedClientTimeoutMs != 0 && now - connectedSinceMs >= connectedClientTimeoutMs) {
+            stopBluetooth("BT client connected timeout; stopping Bluetooth");
+        }
         return;
     }
 
-    if (btConnected || serialBT->connected()) {
-        return;
+    if (!noClientTimerActive) {
+        noClientSinceMs = now;
+        noClientTimerActive = true;
     }
 
-    if (millis() < noClientTimeoutMs) {
+    unsigned long timeoutMs = (autoStopHold || (userOverrideActive && userOverrideEnabled)) ?
+        holdNoClientTimeoutMs :
+        noClientTimeoutMs;
+    if (timeoutMs == 0 || now - noClientSinceMs < timeoutMs) {
         return;
     }
 
@@ -352,6 +389,10 @@ void BTCommandHandler::stopBluetooth(const String& reason) {
     btConnected = false;
     commandBuffer = "";
     lastHeartbeat = 0;
+    noClientSinceMs = 0;
+    connectedSinceMs = 0;
+    noClientTimerActive = false;
+    connectedTimerActive = false;
     consoleAuth.reset();
 }
 
@@ -435,6 +476,12 @@ void BTCommandHandler::resetForTest() {
     commandBuffer = "";
     lastHeartbeat = 0;
     noClientTimeoutMs = BT_NO_CLIENT_TIMEOUT_MS;
+    connectedClientTimeoutMs = BT_CONNECTED_CLIENT_TIMEOUT_MS;
+    holdNoClientTimeoutMs = BT_HOLD_NO_CLIENT_TIMEOUT_MS;
+    noClientSinceMs = 0;
+    connectedSinceMs = 0;
+    noClientTimerActive = false;
+    connectedTimerActive = false;
     consoleAuth.configure(BT_CONSOLE_AUTH_ENABLED != 0,
                           BT_CONSOLE_AUTH_PASSWORD_VALUE,
                           BT_CONSOLE_AUTH_TIMEOUT_MS,
@@ -449,8 +496,12 @@ void BTCommandHandler::configureAuthForTest(bool enabled, const String& password
     updateBTOutputGate();
 }
 
-void BTCommandHandler::configureAutoStopForTest(unsigned long timeoutMs) {
-    noClientTimeoutMs = timeoutMs;
+void BTCommandHandler::configureAutoStopForTest(unsigned long noClientTimeout,
+                                                unsigned long connectedClientTimeout,
+                                                unsigned long holdNoClientTimeout) {
+    noClientTimeoutMs = noClientTimeout;
+    connectedClientTimeoutMs = connectedClientTimeout;
+    holdNoClientTimeoutMs = holdNoClientTimeout;
 }
 #endif
 

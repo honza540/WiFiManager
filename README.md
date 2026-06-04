@@ -30,6 +30,7 @@ Reusable WiFi management module for ESP32 projects with persistent credential st
 - Save/list/clear credentials
 - Scan available networks
 - Live logger streaming
+- Session-based BT auto-stop timers for idle, connected, AP setup, and user-forced modes
 
 ✅ **Memory Efficient**
 - Minimal dependencies (built-in Arduino/ESP32 libraries only)
@@ -65,7 +66,7 @@ Or with a specific version:
 
 ```ini
 lib_deps =
-    https://github.com/honza540/WiFiManager.git#v1.4.4
+    https://github.com/honza540/WiFiManager.git#v1.4.5
 ```
 
 ### Manual Installation
@@ -103,6 +104,7 @@ Edit `include/config.h` in your project to customize:
 - WiFi timeouts
 - WiFi AP setup password (`WIFI_AP_PASSWORD`, 8+ chars for WPA/WPA2)
 - BT device name & password
+- BT console auth and auto-stop timeouts
 - Log levels
 - Storage namespace
 
@@ -118,6 +120,19 @@ To make the library consume your project `include/config.h`, add a small
 Projects can override any macro from `wifimanager_user_config.h`.
 
 **Behavior note:** `WiFiManager::begin()` now starts connection work and returns quickly. Call `WiFiManager::update()` in `loop()` as before, and gate network-dependent application work on `WiFiManager::getState() == WM_CONNECTED` or `WiFi.status() == WL_CONNECTED`.
+
+### Bluetooth lifetime
+
+`BTCommandHandler::update()` enforces these Bluetooth Classic lifetime limits:
+
+| Macro | Default | Applies when |
+| --- | --- | --- |
+| `BT_NO_CLIENT_TIMEOUT_MS` | `3 min` | BT is running normally and no client is connected. The timer starts when BT starts, and restarts after each client disconnect. |
+| `BT_CONNECTED_CLIENT_TIMEOUT_MS` | `15 min` | A BT client stays connected. The service stops after this limit even if the client remains connected. |
+| `BT_HOLD_NO_CLIENT_TIMEOUT_MS` | `15 min` | AP setup mode or `setUserOverride(true)` keeps BT available, but no client is connected. The timer starts when BT starts, and restarts after each client disconnect. |
+| `BT_CONSOLE_AUTH_TIMEOUT_MS` | `2 min` | A connected client has not authenticated to the command console yet. This locks the console session, not the whole BT service. |
+
+Set any timeout to `0` only when that specific auto-stop path should be disabled.
 
 ### BT Commands
 
@@ -230,7 +245,7 @@ void WiFiStorageManager::clearAll();                   // Clear all
 BTCommandHandler::begin();      // Initialize Bluetooth
 BTCommandHandler::update();     // Main loop call
 bool BTCommandHandler::isConnected();  // Check BT connection
-bool BTCommandHandler::setUserOverride(enabled); // Force BT on/off until restart
+bool BTCommandHandler::setUserOverride(enabled); // Force BT on/off, bounded by BT auto-stop timers
 ```
 
 ## Future Enhancements
@@ -253,5 +268,5 @@ Reusable WiFiManager module (2026)
 
 ---
 
-**Version**: 1.4.4 (Stable)
+**Version**: 1.4.5 (Stable)
 **Status**: Production Ready for Testing
