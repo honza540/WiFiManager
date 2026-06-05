@@ -35,6 +35,9 @@ public:
     // Check if the Bluetooth service is currently running
     static bool isRunning();
 
+    // Stop BT only when no client is attached; preserves user/AP override state.
+    static bool stopIfIdle(const String& reason);
+
     // Keep BT available while another module needs it, such as AP setup mode.
     // Auto-stop still applies via BT_HOLD_NO_CLIENT_TIMEOUT_MS.
     static void setAutoStopHold(bool hold);

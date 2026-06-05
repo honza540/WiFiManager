@@ -143,6 +143,17 @@ bool BTCommandHandler::isRunning() {
     return initialized && serialBT != nullptr;
 }
 
+bool BTCommandHandler::stopIfIdle(const String& reason) {
+    if (!initialized || serialBT == nullptr) {
+        return true;
+    }
+    if (isConnected()) {
+        return false;
+    }
+    stopBluetooth(reason);
+    return true;
+}
+
 void BTCommandHandler::setAutoStopHold(bool hold) {
     autoStopHold = hold;
 
